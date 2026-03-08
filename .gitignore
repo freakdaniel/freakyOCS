@@ -2,11 +2,15 @@
 __pycache__/
 *.py[cod]
 *$py.class
+.*e/
 
 # C extensions
 *.so
 
 # Distribution / packaging
+obj/
+bin/
+wwwroot/
 .Python
 build/
 develop-eggs/
@@ -161,3 +165,19 @@ cython_debug/
 
 *.DS_Store
 OCK_Files
+
+# .NET
+bin/
+obj/
+*.user
+.vs/
+
+# Frontend
+Frontend/node_modules/
+Frontend/dist/
+
+# Build output served by .NET
+wwwroot/
+
+# Temp
+nuget.config
