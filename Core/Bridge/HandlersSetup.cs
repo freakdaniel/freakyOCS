@@ -24,6 +24,24 @@ public static class HandlersSetup
             var report = await sniffer.CollectHardwareAsync();
             Log.Information("hardware:detect — done");
             window.Send(AppResponse.Ok("hardware:detected", HardwareFrontendReport.From(report), requestId));
+
+            // Save report JSON to app data folder (%LOCALAPPDATA%/freakyOCS/reports/)
+            try
+            {
+                var reportsDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "freakyOCS", "reports");
+                Directory.CreateDirectory(reportsDir);
+                var timestamp  = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
+                var reportPath = Path.Combine(reportsDir, $"report-{timestamp}.json");
+                await sniffer.ExportReportAsync(report, reportPath);
+                Log.Information("hardware:detect — report saved to {Path}", reportPath);
+                window.Send(AppResponse.Ok("hardware:report-saved", reportPath, requestId));
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "hardware:detect — failed to save report to disk");
+            }
         });
 
         router.Register("hardware:load-report", async (payload, window, requestId) =>

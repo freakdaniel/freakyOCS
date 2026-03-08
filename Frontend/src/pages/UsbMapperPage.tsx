@@ -1,26 +1,29 @@
 import { useEffect, useCallback, useState } from 'react'
-import { Box, Heading, Text, VStack, HStack, Flex, Spinner } from '@chakra-ui/react'
+import { Box, Text, HStack, Flex, Spinner } from '@chakra-ui/react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
 import { usePhotinoInvoke, usePhotinoEvent } from '../bridge/usePhotino'
 import type { UsbController, UsbPort } from '../types'
 import { USB_CONNECTOR_TYPES } from '../types'
-import { Usb, RefreshCw, ChevronLeft, ChevronRight, Check, AlertTriangle, Zap, Info, MousePointer2 } from 'lucide-react'
+import {
+  RefreshCw, ChevronLeft, ChevronRight, Check,
+  AlertTriangle, Zap, Info, MousePointer2,
+} from 'lucide-react'
 
-const S  = '#0D0D1C'
-const B  = 'rgba(255,255,255,0.07)'
-const A  = '#7B7FFF'
-const AD = 'rgba(123,127,255,'
-const T  = '#EDF0FF'
-const TS = '#7A829E'
-
+const BG   = '#0A0A0A'
+const S    = '#111111'
+const B    = 'rgba(255,255,255,0.06)'
+const TEAL = '#2DD4BF'
+const T    = '#F5F5F5'
+const TS   = '#888888'
 const speedColors: Record<string, string> = {
   SuperSpeedPlus: '#A78BFA',
   SuperSpeed:     '#38BDF8',
   HighSpeed:      '#22C55E',
   FullSpeed:      '#EAB308',
   LowSpeed:       '#f97316',
-  Unknown:        '#475569',
+  Unknown:        '#555',
 }
 
 const speedLabels: Record<string, string> = {
@@ -34,9 +37,10 @@ const speedLabels: Record<string, string> = {
 
 export function UsbMapperPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const { state, dispatch } = useApp()
   const invoke = usePhotinoInvoke()
-  const [isScanning, setIsScanning] = useState(false)
+  const [isScanning, setIsScanning]   = useState(false)
   const [autoRefresh, setAutoRefresh] = useState(false)
 
   usePhotinoEvent<UsbController[]>('usb:controllers', (data) => {
@@ -106,211 +110,221 @@ export function UsbMapperPage() {
   const totalPorts    = state.usbControllers.reduce((acc, c) => acc + c.ports.length, 0)
 
   return (
-    <Box maxW="860px" mx="auto">
-      <VStack gap={6} align="stretch">
-        {/* Header */}
-        <Flex justify="space-between" align="start">
-          <Box>
-            <HStack gap={3} mb={1.5}>
-              <Flex w="34px" h="34px" borderRadius="8px" bg={`${AD}0.12)`} align="center" justify="center">
-                <Usb size={17} color={A} />
-              </Flex>
-              <Heading size="lg" color={T} fontWeight="700" letterSpacing="-0.02em">USB Mapper</Heading>
-            </HStack>
-            <Text color={TS} fontSize="sm">Plug devices into each port to detect them. Enable ports you want to use.</Text>
-          </Box>
-          <HStack gap={2}>
-            <Box
-              px={3} py={1} borderRadius="7px" fontSize="sm" fontWeight="600"
-              bg={totalSelected > 15 ? 'rgba(239,68,68,0.1)' : `${AD}0.1)`}
-              color={totalSelected > 15 ? '#EF4444' : A}
-            >
-              {totalSelected}/{totalPorts} ports
-            </Box>
-            {totalSelected > 15 && (
-              <Flex px={2} py={1} borderRadius="6px" bg="rgba(239,68,68,0.1)" align="center" gap={1}>
-                <AlertTriangle size={12} color="#EF4444" />
-                <Text fontSize="xs" color="#EF4444" fontWeight="600">Max 15!</Text>
-              </Flex>
-            )}
-          </HStack>
-        </Flex>
+    <Flex direction="column" h="100vh" bg={BG} px={7} py={6} gap={0}>
 
-        {/* Controls */}
-        <Flex gap={3} flexWrap="wrap" align="center" justify="space-between">
-          <HStack gap={2}>
-            <Box
-              as="button" px={3} py="7px" borderRadius="8px"
-              bg="rgba(255,255,255,0.04)" color={TS} fontSize="sm" fontWeight="500"
-              _hover={{ bg: 'rgba(255,255,255,0.07)' }}
-              onClick={startScan} opacity={isScanning ? 0.6 : 1}
-              display="flex" alignItems="center" gap={2}
-            >
-              <RefreshCw size={13} className={isScanning ? 'spin' : ''} /> Refresh
-            </Box>
-            <Box
-              as="button" px={3} py="7px" borderRadius="8px"
-              bg="rgba(255,255,255,0.04)" color={TS} fontSize="sm" fontWeight="500"
-              _hover={{ bg: 'rgba(255,255,255,0.07)' }}
-              onClick={selectAllPopulated} display="flex" alignItems="center" gap={2}
-            >
-              <MousePointer2 size={13} /> Select Populated
-            </Box>
-          </HStack>
-          <Box
-            as="button" px={3} py="7px" borderRadius="8px"
-            bg={autoRefresh ? 'rgba(34,197,94,0.08)' : 'rgba(255,255,255,0.03)'}
-            border={autoRefresh ? '1px solid rgba(34,197,94,0.2)' : `1px solid ${B}`}
-            color={autoRefresh ? '#22C55E' : TS}
-            fontSize="xs" fontWeight="600"
-            onClick={() => setAutoRefresh(!autoRefresh)}
-            display="flex" alignItems="center" gap={1.5}
-          >
-            <Zap size={11} /> Auto-refresh (3s)
-          </Box>
-        </Flex>
-
-        {/* Tip */}
-        <Flex bg="rgba(56,189,248,0.05)" border="1px solid rgba(56,189,248,0.1)" borderRadius="10px" px={4} py={3} align="center" gap={3}>
-          <Info size={15} color="#38BDF8" />
-          <Text fontSize="xs" color={TS}>
-            All USB ports are detected automatically. Select up to{' '}
-            <Text as="span" color="#EF4444" fontWeight="600">15 ports</Text>{' '}
-            per controller. Plug devices in briefly to identify physical port locations.
+      {/* ── Header ─────────────────────────────────────────────────────── */}
+      <Flex justify="space-between" align="center" mb={4}>
+        <Box>
+          <Text fontSize="22px" fontWeight="700" letterSpacing="-0.03em" color={T} mb={1}>
+            {t('usb.title')}
           </Text>
-        </Flex>
-
-        {isScanning && state.usbControllers.length === 0 ? (
-          <Box bg={S} border={`1px solid ${B}`} borderRadius="12px" p={8}>
-            <VStack gap={4}><Spinner size="xl" color={A} /><Text color={TS} fontSize="sm">Scanning USB controllers…</Text></VStack>
-          </Box>
-        ) : (
-          state.usbControllers.map((controller, ci) => {
-            const selectedCount = controller.ports.filter((p) => p.selected).length
-            return (
-              <Box key={ci} bg={S} border={`1px solid ${B}`} borderRadius="12px" overflow="hidden">
-                <Flex justify="space-between" align="center" px={5} py={3} borderBottom={`1px solid ${B}`}>
-                  <HStack gap={3}>
-                    <Box px={2} py={0.5} borderRadius="5px" bg="rgba(167,139,250,0.1)" fontSize="xs" fontWeight="600" color="#A78BFA">
-                      {controller.type}
-                    </Box>
-                    <Text color={T} fontWeight="500" fontSize="sm">{controller.name}</Text>
-                  </HStack>
-                  <Box
-                    px={2} py={0.5} borderRadius="5px" fontSize="xs" fontWeight="600"
-                    bg={selectedCount > 15 ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)'}
-                    color={selectedCount > 15 ? '#EF4444' : '#22C55E'}
-                  >
-                    {selectedCount}/{controller.ports.length}
-                  </Box>
-                </Flex>
-                <VStack align="stretch" gap={0} px={3} py={2}>
-                  {controller.ports.map((port, pi) => (
-                    <PortRow
-                      key={pi}
-                      port={port}
-                      onToggle={() => togglePort(ci, pi)}
-                      onTypeChange={(type) => setPortType(ci, pi, type)}
-                      accentColor={A}
-                      speedColors={speedColors}
-                      speedLabels={speedLabels}
-                    />
-                  ))}
-                </VStack>
-              </Box>
-            )
-          })
-        )}
-
-        {/* Navigation */}
-        <Flex justify="space-between">
+          <Text color={TS} fontSize="13px">{t('usb.subtitle')}</Text>
+        </Box>
+        <HStack gap={2}>
           <Box
-            as="button" px={4} py="8px" borderRadius="8px"
-            bg="rgba(255,255,255,0.04)" color={TS} fontSize="sm" fontWeight="500"
+            px={3} py="5px" borderRadius="7px" fontSize="12px" fontWeight="700"
+            bg={totalSelected > 15 ? 'rgba(239,68,68,0.08)' : 'rgba(45,212,191,0.08)'}
+            border={`1px solid ${totalSelected > 15 ? 'rgba(239,68,68,0.2)' : 'rgba(45,212,191,0.2)'}`}
+            color={totalSelected > 15 ? '#EF4444' : TEAL}
+          >
+            {totalSelected}/{totalPorts} {t('usb.portsLabel')}
+          </Box>
+          {totalSelected > 15 && (
+            <HStack gap={1} px={2} py="5px" borderRadius="6px" bg="rgba(239,68,68,0.08)">
+              <AlertTriangle size={11} color="#EF4444" />
+              <Text fontSize="11px" color="#EF4444" fontWeight="600">{t('usb.maxWarning')}</Text>
+            </HStack>
+          )}
+        </HStack>
+      </Flex>
+
+      {/* ── Controls ───────────────────────────────────────────────────── */}
+      <Flex gap={3} mb={3} align="center" justify="space-between">
+        <HStack gap={2}>
+          <Box
+            as="button" px={3} py="6px" borderRadius="8px"
+            bg="rgba(255,255,255,0.04)" color={TS} fontSize="12px" fontWeight="500"
             _hover={{ bg: 'rgba(255,255,255,0.07)', color: T }}
-            onClick={() => navigate('/smbios')} display="flex" alignItems="center" gap={2}
+            onClick={startScan} opacity={isScanning ? 0.6 : 1}
+            display="flex" alignItems="center" gap={2} transition="all 0.15s"
           >
-            <ChevronLeft size={14} /> SMBIOS
+            <RefreshCw size={12} className={isScanning ? 'spin' : ''} /> {t('usb.refresh')}
           </Box>
           <Box
-            as="button" px={4} py="8px" borderRadius="8px"
-            bg={totalSelected > 0 ? A : `${AD}0.3)`}
-            color="white" fontSize="sm" fontWeight="600"
-            _hover={totalSelected > 0 ? { bg: '#8F93FF', boxShadow: '0 0 16px rgba(123,127,255,0.3)' } : {}}
-            onClick={() => totalSelected > 0 && navigate('/build')}
-            cursor={totalSelected > 0 ? 'pointer' : 'not-allowed'}
-            display="flex" alignItems="center" gap={2}
+            as="button" px={3} py="6px" borderRadius="8px"
+            bg="rgba(255,255,255,0.04)" color={TS} fontSize="12px" fontWeight="500"
+            _hover={{ bg: 'rgba(255,255,255,0.07)', color: T }}
+            onClick={selectAllPopulated} display="flex" alignItems="center" gap={2}
+            transition="all 0.15s"
           >
-            Build EFI <ChevronRight size={14} />
+            <MousePointer2 size={12} /> {t('usb.selectPopulated')}
           </Box>
-        </Flex>
-      </VStack>
-    </Box>
+        </HStack>
+        <Box
+          as="button" px={3} py="6px" borderRadius="7px"
+          bg={autoRefresh ? 'rgba(45,212,191,0.08)' : 'rgba(255,255,255,0.03)'}
+          border={`1px solid ${autoRefresh ? 'rgba(45,212,191,0.2)' : B}`}
+          color={autoRefresh ? TEAL : TS}
+          fontSize="11px" fontWeight="600"
+          onClick={() => setAutoRefresh(!autoRefresh)}
+          display="flex" alignItems="center" gap={1.5}
+          transition="all 0.15s"
+        >
+          <Zap size={11} /> {t('usb.autoRefresh')}
+        </Box>
+      </Flex>
+
+      {/* ── Tip ────────────────────────────────────────────────────────── */}
+      <Flex
+        bg="rgba(45,212,191,0.04)" border="1px solid rgba(45,212,191,0.1)"
+        borderRadius="9px" px={4} py="8px" align="center" gap={3} mb={4}
+      >
+        <Info size={13} color={TEAL} />
+        <Text fontSize="12px" color={TS}>{t('usb.tip')}</Text>
+      </Flex>
+
+      {/* ── Controller list ─────────────────────────────────────────────── */}
+      <Box flex={1} overflowY="auto" minH={0}>
+        {isScanning && state.usbControllers.length === 0 ? (
+          <Flex h="200px" align="center" justify="center" gap={3}
+            bg={S} border={`1px solid ${B}`} borderRadius="12px" direction="column"
+          >
+            <Spinner size="md" color={TEAL} borderWidth="2px" />
+            <Text color={TS} fontSize="13px">{t('usb.scanning')}</Text>
+          </Flex>
+        ) : (
+          <Flex direction="column" gap={3}>
+            {state.usbControllers.map((controller, ci) => {
+              const selectedCount = controller.ports.filter((p) => p.selected).length
+              return (
+                <Box key={ci} bg={S} border={`1px solid ${B}`} borderRadius="12px" overflow="hidden">
+                  <Flex justify="space-between" align="center"
+                    px={4} py={3} borderBottom={`1px solid ${B}`}
+                  >
+                    <HStack gap={2}>
+                      <Box px="7px" py="2px" borderRadius="4px"
+                        bg="rgba(167,139,250,0.08)" fontSize="10px" fontWeight="600" color="#A78BFA">
+                        {controller.type}
+                      </Box>
+                      <Text color={T} fontWeight="500" fontSize="13px">{controller.name}</Text>
+                    </HStack>
+                    <Box px="7px" py="2px" borderRadius="4px" fontSize="10px" fontWeight="700"
+                      bg={selectedCount > 15 ? 'rgba(239,68,68,0.08)' : 'rgba(45,212,191,0.08)'}
+                      color={selectedCount > 15 ? '#EF4444' : TEAL}
+                    >
+                      {selectedCount}/{controller.ports.length}
+                    </Box>
+                  </Flex>
+                  <Flex direction="column" gap={0} px={3} py={2}>
+                    {controller.ports.map((port, pi) => (
+                      <PortRow
+                        key={pi}
+                        port={port}
+                        onToggle={() => togglePort(ci, pi)}
+                        onTypeChange={(type) => setPortType(ci, pi, type)}
+                        speedColors={speedColors}
+                        speedLabels={speedLabels}
+                      />
+                    ))}
+                  </Flex>
+                </Box>
+              )
+            })}
+          </Flex>
+        )}
+      </Box>
+
+      {/* ── Navigation ─────────────────────────────────────────────────── */}
+      <Flex justify="space-between" align="center" pt={5} mt={4} borderTop={`1px solid ${B}`}>
+        <Box as="button" px={4} py="8px" borderRadius="8px"
+          bg="rgba(255,255,255,0.04)" color={TS} fontSize="13px" fontWeight="500"
+          _hover={{ bg: 'rgba(255,255,255,0.08)', color: T }}
+          onClick={() => navigate('/smbios')} display="flex" alignItems="center" gap={2}
+          transition="all 0.15s">
+          <ChevronLeft size={14} /> {t('usb.smbiosNav')}
+        </Box>
+        <Box as="button" px={5} py="8px" borderRadius="8px"
+          bg={totalSelected > 0 ? TEAL : 'rgba(255,255,255,0.06)'}
+          color={totalSelected > 0 ? '#0A0A0A' : TS}
+          fontSize="13px" fontWeight="700"
+          _hover={totalSelected > 0 ? { bg: '#38E5CE', boxShadow: '0 0 20px rgba(45,212,191,0.3)' } : {}}
+          onClick={() => totalSelected > 0 && navigate('/build')}
+          cursor={totalSelected > 0 ? 'pointer' : 'not-allowed'}
+          display="flex" alignItems="center" gap={2}
+          opacity={totalSelected > 0 ? 1 : 0.4}
+          transition="all 0.15s">
+          {t('usb.buildEfi')} <ChevronRight size={14} />
+        </Box>
+      </Flex>
+    </Flex>
   )
 }
 
 function PortRow({
-  port, onToggle, onTypeChange, accentColor, speedColors, speedLabels,
+  port, onToggle, onTypeChange, speedColors, speedLabels,
 }: {
   port: UsbPort
   onToggle: () => void
   onTypeChange: (type: number) => void
-  accentColor: string
   speedColors: Record<string, string>
   speedLabels: Record<string, string>
 }) {
   const hasDevice = port.devices.length > 0
+  const TEAL = '#2DD4BF'
+  const T    = '#F5F5F5'
+  const TS   = '#888888'
+  const TM   = '#444444'
 
   return (
     <Flex
-      px={3} py={2.5} mx={1} my={0.5} borderRadius="8px"
-      bg={hasDevice ? 'rgba(34,197,94,0.03)' : 'transparent'}
-      border={port.selected ? `1px solid rgba(123,127,255,0.18)` : '1px solid transparent'}
+      px={3} py="8px" mx={1} my="1px" borderRadius="8px"
+      bg={hasDevice ? 'rgba(45,212,191,0.03)' : 'transparent'}
+      border={port.selected ? '1px solid rgba(45,212,191,0.15)' : '1px solid transparent'}
       align="center" justify="space-between"
       _hover={{ bg: 'rgba(255,255,255,0.02)' }}
-      transition="all 0.1s"
+      transition="all 0.12s"
     >
       <HStack gap={3} flex={1} minW={0}>
         <Box
-          as="button" w="17px" h="17px" borderRadius="4px" flexShrink={0}
-          bg={port.selected ? accentColor : 'transparent'}
-          border={port.selected ? 'none' : '2px solid rgba(255,255,255,0.12)'}
+          as="button" w="16px" h="16px" borderRadius="4px" flexShrink={0}
+          bg={port.selected ? TEAL : 'transparent'}
+          border={port.selected ? 'none' : '1.5px solid rgba(255,255,255,0.1)'}
           display="flex" alignItems="center" justifyContent="center"
-          onClick={onToggle}
+          onClick={onToggle} transition="all 0.15s"
         >
-          {port.selected && <Check size={10} color="white" strokeWidth={3} />}
+          {port.selected && <Check size={9} color="#0A0A0A" strokeWidth={3} />}
         </Box>
 
-        <VStack align="start" gap={0} minW="70px">
-          <Text color="#EDF0FF" fontWeight="500" fontSize="sm">{port.name}</Text>
-          <Text fontSize="xs" color={speedColors[port.speedClass]} fontWeight="500">
+        <Flex direction="column" gap={0} minW="70px">
+          <Text color={T} fontWeight="500" fontSize="12px">{port.name}</Text>
+          <Text fontSize="10px" color={speedColors[port.speedClass]} fontWeight="500">
             {speedLabels[port.speedClass]}
           </Text>
-        </VStack>
+        </Flex>
 
         <Box flex={1} minW={0}>
           {hasDevice ? (
             port.devices.map((device, i) => (
               <HStack key={i} gap={1}>
-                <Zap size={10} color="#22C55E" />
-                <Text fontSize="xs" color="#EDF0FF" fontWeight="500" truncate>{device.name}</Text>
+                <Zap size={9} color="#22C55E" />
+                <Text fontSize="11px" color={T} fontWeight="500" truncate>{device.name}</Text>
               </HStack>
             ))
           ) : (
-            <Text color="#363B52" fontSize="xs" fontStyle="italic">No device</Text>
+            <Text color={TM} fontSize="11px" fontStyle="italic">No device</Text>
           )}
         </Box>
       </HStack>
 
       <select
         style={{
-          padding: '4px 8px',
-          background: '#0D0D1C',
+          padding: '3px 7px',
+          background: '#161616',
           border: '1px solid rgba(255,255,255,0.07)',
           borderRadius: '6px',
-          color: '#7A829E',
-          fontSize: '12px',
-          width: '130px',
+          color: TS,
+          fontSize: '11px',
+          width: '125px',
           flexShrink: 0,
           outline: 'none',
         }}
@@ -318,7 +332,7 @@ function PortRow({
         onChange={(e) => onTypeChange(Number(e.target.value))}
       >
         {USB_CONNECTOR_TYPES.map((t) => (
-          <option key={t.value} value={t.value} style={{ background: '#0D0D1C', color: '#EDF0FF' }}>
+          <option key={t.value} value={t.value} style={{ background: '#111111', color: T }}>
             {t.label}
           </option>
         ))}
@@ -326,4 +340,3 @@ function PortRow({
     </Flex>
   )
 }
-

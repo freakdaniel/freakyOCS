@@ -17,6 +17,9 @@
     "subtitle": "OpenCore Configurator",
     "version": "v0.1.0"
   },
+  "sidebar": {
+    "currentStep": "Current step"
+  },
   "home": {
     "title": "freakyOCS",
     "heading": "OpenCore EFI Builder",
@@ -52,24 +55,38 @@
     "title": "Hardware Report",
     "subtitle": "Scan or import your system hardware information.",
     "autoDetect": "Auto Detect",
-    "autoDetectDesc": "Scan system hardware automatically",
-    "loadFile": "Load from File",
-    "loadFileDesc": "Import a JSON hardware report",
+    "autoDetectDesc": "Scan your system and generate a hardware report automatically.",
+    "loadFile": "Load Report",
+    "loadFileDesc": "Drag & drop an existing hardware report JSON file here.",
     "scanning": "Scanning hardware...",
+    "detectingHw": "Detecting hardware\u2026",
+    "rescan": "Re-scan",
+    "savedTo": "Report saved to:",
+    "loadedBadge": "Loaded",
     "dragDrop": "Drag & drop a report file here",
     "orClick": "or click to browse",
     "checkCompatibility": "Check Compatibility"
   },
   "compatibility": {
     "title": "Compatibility",
-    "subtitle": "Hardware compatibility check against macOS requirements.",
+    "subtitle": "Review hardware compatibility with macOS.",
     "supported": "Supported",
     "limited": "Limited",
     "unsupported": "Unsupported",
     "unknown": "Unknown",
     "blockers": "Blockers",
     "warnings": "Warnings",
-    "selectMacOS": "Select macOS"
+    "selectMacOS": "Select macOS",
+    "noHardware": "No Hardware Report",
+    "noHardwareDesc": "Detect or load hardware first to check compatibility.",
+    "goToDetection": "Go to Hardware Detection",
+    "overallStatus": "Overall Status",
+    "reCheck": "Re-check",
+    "deviceCompat": "Device Compatibility",
+    "category": "Category",
+    "device": "Device",
+    "status": "Status",
+    "notes": "Notes"
   },
   "macos": {
     "title": "macOS Version",
@@ -78,28 +95,37 @@
     "supported": "Supported",
     "unsupported": "Unsupported",
     "recommended": "Recommended",
-    "warnings": "Warnings"
+    "warnings": "Warnings",
+    "compatBased": "Compatibility is based on your detected hardware.",
+    "scanFirst": "Scan hardware first to see compatibility status.",
+    "partial": "Partial",
+    "compatible": "Compatible",
+    "selectedLabel": "Selected",
+    "configAcpi": "Configure ACPI"
   },
   "acpi": {
     "title": "ACPI Patches",
-    "subtitle": "Select ACPI SSDTs for your hardware.",
+    "subtitle": "Select SSDTs needed for your hardware.",
     "searchPlaceholder": "Search patches...",
     "loading": "Loading patches...",
     "required": "Required",
     "recommended": "Recommended",
     "optional": "Optional",
-    "hardwareSpecific": "Hardware-Specific"
+    "hardwareSpecific": "Hardware-Specific",
+    "enabled": "enabled",
+    "configKexts": "Configure Kexts"
   },
   "kexts": {
     "title": "Kernel Extensions",
-    "subtitle": "Configure kexts for your hardware.",
+    "subtitle": "Configure kexts required for your hardware.",
     "searchPlaceholder": "Search kexts...",
     "loading": "Loading kexts...",
     "enabled": "enabled",
-    "all": "All"
+    "all": "All",
+    "configSmbios": "Configure SMBIOS"
   },
   "smbios": {
-    "title": "SMBIOS",
+    "title": "SMBIOS Configuration",
     "subtitle": "Select a Mac model that matches your hardware.",
     "searchPlaceholder": "Search models...",
     "loading": "Loading models...",
@@ -107,11 +133,14 @@
     "generating": "Generating...",
     "regenerate": "Regenerate",
     "recommended": "Recommended",
-    "generated": "Generated SMBIOS"
+    "generated": "Generated SMBIOS",
+    "bestMatch": "Best Match",
+    "showAll": "Show All",
+    "usbMapping": "USB Mapping"
   },
   "usb": {
     "title": "USB Mapper",
-    "subtitle": "Plug devices into each port to detect them.",
+    "subtitle": "Plug devices in to detect ports. Enable up to 15 per controller.",
     "refresh": "Refresh",
     "selectPopulated": "Select Populated",
     "autoRefresh": "Auto-refresh (3s)",
@@ -119,11 +148,13 @@
     "noDevice": "No device",
     "portsLabel": "ports",
     "maxWarning": "Max 15!",
-    "tip": "Plug a USB device into each port you want to map. macOS has a 15-port limit per controller."
+    "tip": "Plug a USB device into each port you want to map. macOS has a 15-port limit per controller.",
+    "buildEfi": "Build EFI",
+    "smbiosNav": "SMBIOS"
   },
   "build": {
     "title": "Build EFI",
-    "subtitle": "Generate your OpenCore EFI folder.",
+    "subtitle": "Generate your OpenCore EFI folder with all configured options.",
     "summary": "Build Summary",
     "hardwareReport": "Hardware Report",
     "macosVersion": "macOS Version",
@@ -141,6 +172,9 @@
     "cancel": "Cancel",
     "retryBuild": "Retry Build",
     "buildFailed": "Build Failed",
+    "buildLog": "Build Log",
+    "viewResult": "View Result",
+    "usbMapper": "USB Mapper",
     "stages": {
       "idle": "Ready to build",
       "downloading-opencore": "Downloading OpenCore...",
@@ -154,7 +188,7 @@
     }
   },
   "result": {
-    "title": "Build Result",
+    "title": "Result",
     "success": "Build Successful!",
     "failed": "Build Failed",
     "successDesc": "Your OpenCore EFI folder has been created.",
@@ -168,6 +202,7 @@
     "newBuild": "New Build",
     "openEfi": "Open EFI",
     "noBuildResult": "No Build Result",
+    "completeFirst": "Complete a build first to see results.",
     "goToBuild": "Go to Build",
     "required": "Required",
     "optional": "Optional"

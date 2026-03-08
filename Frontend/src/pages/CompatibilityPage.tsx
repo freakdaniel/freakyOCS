@@ -1,33 +1,59 @@
 import { useEffect, useCallback, useState } from 'react'
 import {
-  Box, Heading, Text, VStack, HStack, Flex, SimpleGrid, Spinner, Table,
+  Box, Text, HStack, Flex, Spinner,
 } from '@chakra-ui/react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
 import { usePhotinoInvoke, usePhotinoEvent } from '../bridge/usePhotino'
 import type { CompatibilityResult, CompatibilityStatus } from '../types'
 import {
-  ShieldCheck, CheckCircle2, AlertTriangle, XCircle, HelpCircle, RefreshCw, ChevronLeft, ChevronRight,
+  ShieldCheck, CheckCircle2, AlertTriangle, XCircle, HelpCircle, RefreshCw,
+  ChevronLeft, ChevronRight, Cpu, MonitorSmartphone, CircuitBoard, Volume2,
+  Wifi, HardDrive, Bluetooth, Usb, Keyboard, Mouse, Camera, Fingerprint,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
-const S  = '#0D0D1C'
-const B  = 'rgba(255,255,255,0.07)'
-//const BH = 'rgba(255,255,255,0.13)'
-const A  = '#7B7FFF'
-//const AD = 'rgba(123,127,255,'
-const T  = '#EDF0FF'
-const TS = '#7A829E'
+const BG   = '#0A0A0A'
+const S    = '#111111'
+const B    = 'rgba(255,255,255,0.06)'
+const TEAL = '#2DD4BF'
+const T    = '#F5F5F5'
+const TS   = '#888888'
 
-const statusConfig: Record<CompatibilityStatus, { color: string; bg: string; icon: LucideIcon; label: string }> = {
-  supported:   { color: '#22C55E', bg: 'rgba(34,197,94,0.1)',   icon: CheckCircle2, label: 'Supported' },
-  limited:     { color: '#EAB308', bg: 'rgba(234,179,8,0.1)',   icon: AlertTriangle, label: 'Limited' },
-  unsupported: { color: '#EF4444', bg: 'rgba(239,68,68,0.1)',   icon: XCircle,      label: 'Unsupported' },
-  unknown:     { color: '#7A829E', bg: 'rgba(122,130,158,0.1)', icon: HelpCircle,   label: 'Unknown' },
+const statusConfig: Record<CompatibilityStatus, {
+  color: string; bg: string; border: string; icon: LucideIcon; labelKey: string
+}> = {
+  supported:   { color: TEAL,      bg: 'rgba(45,212,191,0.07)',   border: 'rgba(45,212,191,0.2)',   icon: CheckCircle2,  labelKey: 'compatibility.supported' },
+  limited:     { color: '#EAB308', bg: 'rgba(234,179,8,0.07)',    border: 'rgba(234,179,8,0.2)',    icon: AlertTriangle, labelKey: 'compatibility.limited' },
+  unsupported: { color: '#EF4444', bg: 'rgba(239,68,68,0.07)',    border: 'rgba(239,68,68,0.2)',    icon: XCircle,       labelKey: 'compatibility.unsupported' },
+  unknown:     { color: TS,        bg: 'rgba(136,136,136,0.07)',  border: 'rgba(136,136,136,0.15)', icon: HelpCircle,    labelKey: 'compatibility.unknown' },
+}
+
+const categoryIcons: Record<string, LucideIcon> = {
+  CPU: Cpu,
+  GPU: MonitorSmartphone,
+  Motherboard: CircuitBoard,
+  Audio: Volume2,
+  WiFi: Wifi,
+  Ethernet: HardDrive,
+  Network: HardDrive,
+  Bluetooth: Bluetooth,
+  USB: Usb,
+  Storage: HardDrive,
+  Input: Keyboard,
+  Keyboard: Keyboard,
+  Mouse: Mouse,
+  Trackpad: Mouse,
+  Webcam: Camera,
+  Camera: Camera,
+  Biometric: Fingerprint,
+  TouchID: Fingerprint,
 }
 
 export function CompatibilityPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const { state, dispatch } = useApp()
   const invoke = usePhotinoInvoke()
   const [isChecking, setIsChecking] = useState(false)
@@ -47,49 +73,66 @@ export function CompatibilityPage() {
     if (state.report && !state.compatibility) checkCompatibility()
   }, [state.report, state.compatibility, checkCompatibility])
 
+  // ── No hardware loaded ──────────────────────────────────────────────────────
   if (!state.report) {
     return (
-      <Box maxW="860px" mx="auto">
-        <Box bg={S} border={`1px solid ${B}`} borderRadius="12px" p={8}>
-          <VStack gap={4}>
-            <ShieldCheck size={36} color={TS} />
-            <Text color={T} fontWeight="600" fontSize="sm">No Hardware Report</Text>
-            <Text color={TS} fontSize="sm">Please detect or load hardware first.</Text>
-            <Box as="button" px={4} py="8px" borderRadius="8px" bg={A} color="white" fontSize="sm" fontWeight="600"
-              _hover={{ bg: '#8F93FF' }} onClick={() => navigate('/report')}>
-              Go to Hardware Detection
-            </Box>
-          </VStack>
+      <Flex direction="column" h="100vh" bg={BG} px={7} py={6}>
+        <Box mb={5}>
+          <Text fontSize="22px" fontWeight="700" letterSpacing="-0.03em" color={T} mb={1}>
+            {t('compatibility.title')}
+          </Text>
+          <Text color={TS} fontSize="13px">{t('compatibility.subtitle')}</Text>
         </Box>
-      </Box>
+        <Flex
+          flex={1} align="center" justify="center" direction="column" gap={4}
+          bg={S} border={`1px solid ${B}`} borderRadius="14px"
+        >
+          <Flex w="52px" h="52px" borderRadius="14px"
+            bg="rgba(136,136,136,0.08)" align="center" justify="center">
+            <ShieldCheck size={24} color={TS} />
+          </Flex>
+          <Box textAlign="center">
+            <Text color={T} fontWeight="600" fontSize="14px" mb={1}>{t('compatibility.noHardware')}</Text>
+            <Text color={TS} fontSize="13px">{t('compatibility.noHardwareDesc')}</Text>
+          </Box>
+          <Box
+            as="button" px={5} py="9px" borderRadius="9px"
+            bg={TEAL} color="#0A0A0A" fontSize="13px" fontWeight="600"
+            _hover={{ bg: '#38E5CE', boxShadow: `0 0 20px rgba(45,212,191,0.3)` }}
+            onClick={() => navigate('/report')} transition="all 0.15s"
+          >
+            {t('compatibility.goToDetection')}
+          </Box>
+        </Flex>
+      </Flex>
     )
   }
 
   return (
-    <Box maxW="860px" mx="auto">
-      <VStack gap={6} align="stretch">
-        {/* Header */}
-        <Box>
-          <HStack gap={3} mb={1.5}>
-            <Flex w="34px" h="34px" borderRadius="8px" bg="rgba(34,197,94,0.12)" align="center" justify="center">
-              <ShieldCheck size={17} color="#22C55E" />
-            </Flex>
-            <Heading size="lg" color={T} fontWeight="700" letterSpacing="-0.02em">Compatibility Check</Heading>
-          </HStack>
-          <Text color={TS} fontSize="sm">Review hardware compatibility with macOS.</Text>
-        </Box>
+    <Flex direction="column" h="100vh" bg={BG} px={7} py={6} gap={0}>
 
+      {/* ── Header ─────────────────────────────────────────────────────── */}
+      <Box mb={5}>
+        <Text fontSize="22px" fontWeight="700" letterSpacing="-0.03em" color={T} mb={1}>
+          {t('compatibility.title')}
+        </Text>
+        <Text color={TS} fontSize="13px">{t('compatibility.subtitle')}</Text>
+      </Box>
+
+      {/* ── Content ────────────────────────────────────────────────────── */}
+      <Box flex={1} overflowY="auto" minH={0}>
         {isChecking ? (
-          <Box bg={S} border={`1px solid ${B}`} borderRadius="12px" p={8}>
-            <VStack gap={4}>
-              <Spinner size="xl" color={A} />
-              <Text color={TS} fontSize="sm">Checking compatibility…</Text>
-            </VStack>
-          </Box>
+          <Flex h="200px" align="center" justify="center" gap={3}
+            bg={S} border={`1px solid ${B}`} borderRadius="12px" direction="column"
+          >
+            <Spinner size="md" color={TEAL} borderWidth="2px" />
+            <Text color={TS} fontSize="13px">{t('common.loading')}</Text>
+          </Flex>
         ) : state.compatibility ? (
-          <>
-            {/* Summary */}
-            <Flex bg={S} border={`1px solid ${B}`} borderRadius="12px" p={4}
+          <Flex direction="column" gap={3}>
+
+            {/* Summary bar */}
+            <Flex bg={S} border={`1px solid ${B}`} borderRadius="12px" px={4} py={3}
               justify="space-between" align="center"
             >
               <HStack gap={3}>
@@ -98,119 +141,123 @@ export function CompatibilityPage() {
                   const Icon = cfg.icon
                   return (
                     <>
-                      <Flex w="38px" h="38px" borderRadius="9px" bg={cfg.bg} align="center" justify="center">
-                        <Icon size={18} color={cfg.color} />
+                      <Flex w="36px" h="36px" borderRadius="9px"
+                        bg={cfg.bg} border={`1px solid ${cfg.border}`}
+                        align="center" justify="center"
+                      >
+                        <Icon size={17} color={cfg.color} />
                       </Flex>
                       <Box>
-                        <Text color={TS} fontSize="10px" fontWeight="600" textTransform="uppercase" letterSpacing="0.05em">Overall Status</Text>
-                        <Text color={cfg.color} fontSize="sm" fontWeight="700">{cfg.label}</Text>
+                        <Text color={TS} fontSize="10px" fontWeight="600"
+                          textTransform="uppercase" letterSpacing="0.07em">
+                          {t('compatibility.overallStatus')}
+                        </Text>
+                        <Text color={cfg.color} fontSize="13px" fontWeight="700">
+                          {t(cfg.labelKey)}
+                        </Text>
                       </Box>
                     </>
                   )
                 })()}
               </HStack>
-              <Box as="button" px={3} py={2} borderRadius="8px"
-                bg="rgba(255,255,255,0.04)" color={TS} fontSize="sm"
-                _hover={{ bg: 'rgba(255,255,255,0.08)' }}
+              <Box as="button" px={3} py="6px" borderRadius="8px"
+                bg="rgba(255,255,255,0.04)" color={TS} fontSize="12px" fontWeight="500"
+                _hover={{ bg: 'rgba(255,255,255,0.08)', color: T }}
                 onClick={checkCompatibility} display="flex" alignItems="center" gap={2}
+                transition="all 0.15s"
               >
-                <RefreshCw size={13} /> Re-check
+                <RefreshCw size={12} /> {t('compatibility.reCheck')}
               </Box>
             </Flex>
 
-            {/* Warnings & Blockers */}
-            {(state.compatibility.warnings.length > 0 || state.compatibility.blockers.length > 0) && (
-              <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
-                {state.compatibility.blockers.length > 0 && (
-                  <Box bg="rgba(239,68,68,0.06)" border="1px solid rgba(239,68,68,0.14)" borderRadius="12px" p={4}>
-                    <HStack gap={2} mb={3}>
-                      <XCircle size={15} color="#EF4444" />
-                      <Text color="#EF4444" fontWeight="600" fontSize="sm">Blockers</Text>
-                    </HStack>
-                    <VStack align="start" gap={2}>
-                      {state.compatibility.blockers.map((b, i) => (
-                        <Text key={i} color="#FCA5A5" fontSize="xs">{b}</Text>
-                      ))}
-                    </VStack>
-                  </Box>
-                )}
-                {state.compatibility.warnings.length > 0 && (
-                  <Box bg="rgba(234,179,8,0.06)" border="1px solid rgba(234,179,8,0.15)" borderRadius="12px" p={4}>
-                    <HStack gap={2} mb={3}>
-                      <AlertTriangle size={15} color="#EAB308" />
-                      <Text color="#EAB308" fontWeight="600" fontSize="sm">Warnings</Text>
-                    </HStack>
-                    <VStack align="start" gap={2}>
-                      {state.compatibility.warnings.map((w, i) => (
-                        <Text key={i} color="#FDE68A" fontSize="xs">{w}</Text>
-                      ))}
-                    </VStack>
-                  </Box>
-                )}
-              </SimpleGrid>
-            )}
-
-            {/* Device Table */}
+            {/* Device table */}
             <Box bg={S} border={`1px solid ${B}`} borderRadius="12px" overflow="hidden">
-              <Box px={5} py={3.5} borderBottom={`1px solid ${B}`}>
-                <Text color={T} fontWeight="600" fontSize="sm">Device Compatibility</Text>
-              </Box>
-              <Table.Root>
-                <Table.Header>
-                  <Table.Row>
-                    <Table.ColumnHeader color={TS} fontSize="10px" fontWeight="600" textTransform="uppercase" letterSpacing="0.06em">Category</Table.ColumnHeader>
-                    <Table.ColumnHeader color={TS} fontSize="10px" fontWeight="600" textTransform="uppercase" letterSpacing="0.06em">Device</Table.ColumnHeader>
-                    <Table.ColumnHeader color={TS} fontSize="10px" fontWeight="600" textTransform="uppercase" letterSpacing="0.06em">Status</Table.ColumnHeader>
-                    <Table.ColumnHeader color={TS} fontSize="10px" fontWeight="600" textTransform="uppercase" letterSpacing="0.06em">Notes</Table.ColumnHeader>
-                  </Table.Row>
-                </Table.Header>
-                <Table.Body>
-                  {state.compatibility.devices.map((device, i) => {
-                    const cfg = statusConfig[device.status]
-                    const StatusIcon = cfg.icon
-                    return (
-                      <Table.Row key={i} _hover={{ bg: 'rgba(255,255,255,0.02)' }}>
-                        <Table.Cell>
-                          <Box display="inline-block" px={2} py={0.5} borderRadius="5px"
-                            bg="rgba(255,255,255,0.04)" fontSize="10px" color={TS} fontWeight="600">
-                            {device.category}
-                          </Box>
-                        </Table.Cell>
-                        <Table.Cell color={T} fontWeight="500" fontSize="sm">{device.name}</Table.Cell>
-                        <Table.Cell>
-                          <HStack gap={1.5}>
-                            <StatusIcon size={13} color={cfg.color} />
-                            <Text color={cfg.color} fontSize="xs" fontWeight="600">{cfg.label}</Text>
-                          </HStack>
-                        </Table.Cell>
-                        <Table.Cell color={TS} fontSize="xs">{device.notes}</Table.Cell>
-                      </Table.Row>
-                    )
-                  })}
-                </Table.Body>
-              </Table.Root>
-            </Box>
-          </>
-        ) : null}
+              <Flex px={4} py={3} borderBottom={`1px solid ${B}`}
+                justify="space-between" align="center"
+              >
+                <Text color={T} fontWeight="600" fontSize="13px">{t('compatibility.deviceCompat')}</Text>
+                <Text color={TS} fontSize="11px">{state.compatibility.devices.length} {t('nav.usb').toLowerCase().includes('usb') ? 'devices' : 'devices'}</Text>
+              </Flex>
 
-        {/* Navigation */}
-        <Flex justify="space-between">
-          <Box as="button" px={4} py="8px" borderRadius="8px"
-            bg="rgba(255,255,255,0.04)" color={TS} fontSize="sm" fontWeight="500"
-            _hover={{ bg: 'rgba(255,255,255,0.08)', color: T }}
-            onClick={() => navigate('/report')} display="flex" alignItems="center" gap={2}>
-            <ChevronLeft size={14} /> Hardware
-          </Box>
-          <Box as="button" px={4} py="8px" borderRadius="8px"
-            bg={A} color="white" fontSize="sm" fontWeight="600"
-            _hover={{ bg: '#8F93FF', boxShadow: '0 0 16px rgba(123,127,255,0.3)' }}
-            onClick={() => navigate('/macos')} display="flex" alignItems="center" gap={2}
-            opacity={state.compatibility?.overallStatus === 'unsupported' ? 0.4 : 1}
-            pointerEvents={state.compatibility?.overallStatus === 'unsupported' ? 'none' : 'auto'}>
-            Select macOS <ChevronRight size={14} />
-          </Box>
-        </Flex>
-      </VStack>
-    </Box>
+              {/* Header row */}
+              <Flex px={4} py={2} borderBottom={`1px solid ${B}`} bg="rgba(255,255,255,0.02)">
+                <Box flex="0 0 110px">
+                  <Text fontSize="10px" color={TS} fontWeight="700" textTransform="uppercase" letterSpacing="0.07em">
+                    {t('compatibility.category')}
+                  </Text>
+                </Box>
+                <Text flex={1} fontSize="10px" color={TS} fontWeight="700" textTransform="uppercase" letterSpacing="0.07em">
+                  {t('compatibility.device')}
+                </Text>
+                <Box flex="0 0 110px">
+                  <Text fontSize="10px" color={TS} fontWeight="700" textTransform="uppercase" letterSpacing="0.07em">
+                    {t('compatibility.status')}
+                  </Text>
+                </Box>
+                <Text flex={1} fontSize="10px" color={TS} fontWeight="700" textTransform="uppercase" letterSpacing="0.07em">
+                  {t('compatibility.notes')}
+                </Text>
+              </Flex>
+
+              {/* Body rows */}
+              {state.compatibility.devices.map((device, i) => {
+                const cfg = statusConfig[device.status]
+                const StatusIcon = cfg.icon
+                const CategoryIcon = categoryIcons[device.category] ?? HelpCircle
+                return (
+                  <Flex key={i} px={4} py={2} align="center"
+                    borderBottom={i < state.compatibility!.devices.length - 1
+                      ? `1px solid rgba(255,255,255,0.03)` : 'none'}
+                    _hover={{ bg: 'rgba(255,255,255,0.02)' }}
+                  >
+                    <Box flex="0 0 110px">
+                      <HStack display="inline-flex" gap={1.5} px="7px" py="2px" borderRadius="4px"
+                        bg="rgba(255,255,255,0.04)" fontSize="10px" color={TS} fontWeight="600">
+                        <CategoryIcon size={10} color="#666666" />
+                        <Text>{device.category}</Text>
+                      </HStack>
+                    </Box>
+                    <Text flex={1} color={T} fontWeight="500" fontSize="12px">{device.name}</Text>
+                    <HStack flex="0 0 110px" gap={1.5}>
+                      <StatusIcon size={12} color={cfg.color} />
+                      <Text color={cfg.color} fontSize="11px" fontWeight="600">{t(cfg.labelKey)}</Text>
+                    </HStack>
+                    <Text flex={1} color={TS} fontSize="11px">{device.notes}</Text>
+                  </Flex>
+                )
+              })}
+            </Box>
+          </Flex>
+        ) : null}
+      </Box>
+
+      {/* ── Navigation ─────────────────────────────────────────────────── */}
+      <Flex justify="space-between" align="center" pt={5} mt={4} borderTop={`1px solid ${B}`}>
+        <Box as="button" px={4} py="8px" borderRadius="8px"
+          bg="rgba(255,255,255,0.04)" color={TS} fontSize="13px" fontWeight="500"
+          _hover={{ bg: 'rgba(255,255,255,0.08)', color: T }}
+          onClick={() => navigate('/report')}
+          display="flex" alignItems="center" gap={2} transition="all 0.15s"
+        >
+          <ChevronLeft size={14} /> {t('nav.report')}
+        </Box>
+
+        <Box as="button" px={5} py="8px" borderRadius="8px"
+          bg={state.compatibility?.overallStatus !== 'unsupported' ? TEAL : 'rgba(255,255,255,0.06)'}
+          color={state.compatibility?.overallStatus !== 'unsupported' ? '#0A0A0A' : TS}
+          fontSize="13px" fontWeight="600"
+          _hover={state.compatibility?.overallStatus !== 'unsupported' ? {
+            bg: '#38E5CE', boxShadow: `0 0 20px rgba(45,212,191,0.3)`,
+          } : {}}
+          onClick={() => state.compatibility?.overallStatus !== 'unsupported' && navigate('/macos')}
+          display="flex" alignItems="center" gap={2}
+          opacity={state.compatibility ? 1 : 0.4}
+          cursor={!state.compatibility || state.compatibility.overallStatus === 'unsupported' ? 'not-allowed' : 'pointer'}
+          transition="all 0.15s"
+        >
+          {t('compatibility.selectMacOS')} <ChevronRight size={14} />
+        </Box>
+      </Flex>
+    </Flex>
   )
 }

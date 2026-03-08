@@ -1,0 +1,184 @@
+{
+  "nav": {
+    "home": "首页",
+    "report": "硬件",
+    "compatibility": "兼容性",
+    "macos": "macOS",
+    "acpi": "ACPI",
+    "kexts": "驱动扩展",
+    "smbios": "SMBIOS",
+    "usb": "USB映射",
+    "build": "构建",
+    "result": "结果",
+    "wizardSteps": "向导步骤"
+  },
+  "app": {
+    "name": "freakyOCS",
+    "subtitle": "OpenCore 配置器",
+    "version": "v0.1.0"
+  },
+  "home": {
+    "title": "freakyOCS",
+    "subtitle": "黑苹果自动化 OpenCore EFI 构建工具",
+    "startWizard": "开始向导",
+    "readDocs": "阅读文档",
+    "stats": {
+      "supportedCPU": "支持的 CPU",
+      "supportedGPU": "支持的 GPU",
+      "kextsAvailable": "可用驱动扩展",
+      "macosVersions": "macOS 版本"
+    },
+    "actions": {
+      "scanHardware": "扫描硬件",
+      "scanHardwareDesc": "自动检测系统配置",
+      "loadReport": "加载报告",
+      "loadReportDesc": "导入已保存的硬件报告",
+      "checkCompatibility": "检查兼容性",
+      "checkCompatibilityDesc": "验证硬件与 macOS 的兼容性"
+    }
+  },
+  "report": {
+    "title": "硬件报告",
+    "subtitle": "扫描或导入系统硬件信息。",
+    "autoDetect": "自动检测",
+    "autoDetectDesc": "自动扫描系统硬件",
+    "loadFile": "从文件加载",
+    "loadFileDesc": "导入 JSON 硬件报告",
+    "scanning": "正在扫描硬件...",
+    "dragDrop": "将报告文件拖放到此处",
+    "orClick": "或点击浏览",
+    "checkCompatibility": "检查兼容性"
+  },
+  "compatibility": {
+    "title": "兼容性",
+    "subtitle": "硬件与 macOS 要求的兼容性检查。",
+    "supported": "支持",
+    "limited": "有限支持",
+    "unsupported": "不支持",
+    "unknown": "未知",
+    "blockers": "阻断项",
+    "warnings": "警告",
+    "selectMacOS": "选择 macOS"
+  },
+  "macos": {
+    "title": "macOS 版本",
+    "subtitle": "选择要安装的 macOS 版本。",
+    "loading": "正在加载版本...",
+    "supported": "支持",
+    "unsupported": "不支持",
+    "recommended": "推荐",
+    "warnings": "警告"
+  },
+  "acpi": {
+    "title": "ACPI 补丁",
+    "subtitle": "为您的硬件选择 ACPI SSDT。",
+    "searchPlaceholder": "搜索补丁...",
+    "loading": "正在加载补丁...",
+    "required": "必需",
+    "recommended": "推荐",
+    "optional": "可选",
+    "hardwareSpecific": "特定硬件"
+  },
+  "kexts": {
+    "title": "内核扩展",
+    "subtitle": "为您的硬件配置驱动扩展。",
+    "searchPlaceholder": "搜索驱动扩展...",
+    "loading": "正在加载驱动扩展...",
+    "enabled": "已启用",
+    "all": "全部"
+  },
+  "smbios": {
+    "title": "SMBIOS",
+    "subtitle": "选择与您硬件匹配的 Mac 型号。",
+    "searchPlaceholder": "搜索型号...",
+    "loading": "正在加载型号...",
+    "generate": "生成 SMBIOS 数据",
+    "generating": "正在生成...",
+    "regenerate": "重新生成",
+    "recommended": "推荐",
+    "generated": "已生成的 SMBIOS"
+  },
+  "usb": {
+    "title": "USB 映射",
+    "subtitle": "将设备插入每个端口以检测它们。",
+    "refresh": "刷新",
+    "selectPopulated": "选择已占用端口",
+    "autoRefresh": "自动刷新 (3s)",
+    "scanning": "正在扫描 USB 控制器...",
+    "noDevice": "未连接设备",
+    "portsLabel": "端口",
+    "maxWarning": "最多 15 个！",
+    "tip": "将 USB 设备插入每个要映射的端口。macOS 每个控制器限制 15 个端口。"
+  },
+  "build": {
+    "title": "构建 EFI",
+    "subtitle": "生成 OpenCore EFI 文件夹。",
+    "summary": "构建摘要",
+    "hardwareReport": "硬件报告",
+    "macosVersion": "macOS 版本",
+    "acpiPatches": "ACPI 补丁",
+    "kexts": "驱动扩展",
+    "smbios": "SMBIOS",
+    "usbPorts": "USB 端口",
+    "loaded": "已加载",
+    "missing": "缺失",
+    "notSelected": "未选择",
+    "notGenerated": "未生成",
+    "enabled": "已启用",
+    "mapped": "已映射",
+    "startBuild": "开始构建",
+    "cancel": "取消",
+    "retryBuild": "重试构建",
+    "buildFailed": "构建失败",
+    "stages": {
+      "idle": "准备构建",
+      "downloading-opencore": "正在下载 OpenCore...",
+      "downloading-kexts": "正在下载驱动扩展...",
+      "generating-acpi": "正在生成 ACPI 表...",
+      "generating-config": "正在生成 config.plist...",
+      "generating-usb-map": "正在生成 USB 映射...",
+      "packaging": "正在打包 EFI 文件夹...",
+      "complete": "构建完成！",
+      "error": "构建失败"
+    }
+  },
+  "result": {
+    "title": "构建结果",
+    "success": "构建成功！",
+    "failed": "构建失败",
+    "successDesc": "您的 OpenCore EFI 文件夹已创建。",
+    "outputLocation": "输出位置",
+    "openFolder": "打开文件夹",
+    "biosSettings": "BIOS 设置",
+    "requiredForMacos": "macOS 必需",
+    "nextSteps": "后续步骤",
+    "configSummary": "配置摘要",
+    "backToBuild": "返回构建",
+    "newBuild": "新建构建",
+    "openEfi": "打开 EFI",
+    "noBuildResult": "无构建结果",
+    "goToBuild": "前往构建",
+    "required": "必需",
+    "optional": "可选"
+  },
+  "common": {
+    "back": "返回",
+    "next": "下一步",
+    "loading": "加载中...",
+    "search": "搜索",
+    "cancel": "取消",
+    "save": "保存",
+    "na": "N/A",
+    "get_started": "开始",
+    "open": "打开",
+    "not_detected": "未检测到",
+    "not_selected": "未选择",
+    "none": "无"
+  },
+  "lang": {
+    "en": "English",
+    "ru": "Русский",
+    "zh": "中文",
+    "es": "Español"
+  }
+}

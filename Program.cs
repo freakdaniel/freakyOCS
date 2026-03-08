@@ -35,17 +35,17 @@ internal class Program
             .Enrich.FromLogContext()
             .WriteTo.Console(
                 restrictedToMinimumLevel: LogEventLevel.Information,
-                outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext:l} » {Message:lj}{NewLine}{Exception}")
+                outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext:l} »  {Message:lj}{NewLine}{Exception}")
             .WriteTo.File(
                 logPath,
                 rollingInterval: RollingInterval.Day,
                 retainedFileCountLimit: 7,
-                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext:l} » {Message:lj}{NewLine}{Exception}")
+                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext:l} »   {Message:lj}{NewLine}{Exception}")
             .CreateLogger();
 
         try
         {
-            Log.Information("=== freakyOCS starting ===");
+            Log.Information("App starting...");
             Log.Information("Version: 0.1.0");
             Log.Information("Runtime: {Runtime}", System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription);
             Log.Information("OS: {OS}", Environment.OSVersion);
@@ -78,7 +78,7 @@ internal class Program
             builder.WebApp.Services.AddSingleton<DownloadService>();
             builder.WebApp.Services.AddSingleton<GitHubService>();
             builder.WebApp.Services.AddSingleton<HashService>();
-            builder.WebApp.Services.AddSingleton<UsbMapperService>(p =>
+            builder.WebApp.Services.AddSingleton(p =>
             {
                 var dataDir = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -126,7 +126,7 @@ internal class Program
             builder.Window
                 .SetTitle("OpCore Simplify")
                 .SetSize(new Size(1280, 800))
-                .SetMinSize(new Size(1024, 640))
+                .SetMinSize(new Size(1024, 700))
                 .Center()
                 .SetResizable(true)
                 .SetContextMenuEnabled(false)
@@ -134,20 +134,11 @@ internal class Program
                 .SetUseOsDefaultSize(false)
                 .GrantBrowserPermissions();
 
-            // On some Windows systems WebView2 can show a black surface due to GPU issues.
-            // Force software rendering unless the user already provided browser args.
             if (OperatingSystem.IsWindows())
             {
                 var existingArgs = Environment.GetEnvironmentVariable("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS");
-                // if (string.IsNullOrWhiteSpace(existingArgs))
-                // {
-                //     Environment.SetEnvironmentVariable(
-                //         "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
-                //         "--disable-gpu --disable-gpu-compositing");
-                //     Log.Information("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: software rendering workaround applied");
-                // }
-
                 var userData = Environment.GetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER");
+
                 if (string.IsNullOrWhiteSpace(userData))
                 {
                     var appDataDir = Path.Combine(
@@ -216,7 +207,6 @@ internal class Program
                 var windowUrl = $"http://localhost:{port}/";
 
 #if DEBUG
-                // In dev mode, prefer the Vite dev server for hot reload if it's running.
                 try
                 {
                     using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(1) };
@@ -239,8 +229,6 @@ internal class Program
 
                 builder.Window.SetStartUrl(windowUrl);
 
-                // Capture service provider lazily — DI container is not built until builder.Build().
-                // At runtime, sender IS the IInfiniFrameWindow (set via Events.DefineSender in Build()).
                 builder.Window.Events.WebMessageReceived += (object? sender, string message) =>
                 {
                     Log.Debug("WebMessage received: {Message}",
@@ -250,10 +238,8 @@ internal class Program
                 };
             }
 
-            // ── Build and run ─────────────────────────────────────────────────────────
             InfiniFrameWebApplication application = builder.Build();
 
-            // Assign service provider so the message handler closure can resolve MessageRouter.
             if (!webviewTestMode)
             {
                 sp = application.WebApp.Services;
@@ -277,7 +263,7 @@ internal class Program
         {
             Log.CloseAndFlush();
         }
-    } // end Main
+    }
 
     // ── Helpers ──────────────────────────────────────────────────────────────────
 

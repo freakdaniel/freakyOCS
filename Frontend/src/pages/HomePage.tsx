@@ -1,76 +1,33 @@
-import { Box, Heading, Text, VStack, HStack, Flex, SimpleGrid } from '@chakra-ui/react'
+import { Box, Text, HStack, Flex } from '@chakra-ui/react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useApp } from '../context/AppContext'
 import {
-  Cpu,
-  Usb,
-  ChevronRight,
-  ArrowRight,
-  Monitor,
-  Apple,
-  Package,
-  Zap,
-  Shield,
-  Layers,
+  Cpu, Usb, ArrowRight,
+  Zap, Shield, Layers,
 } from 'lucide-react'
 
-// ── Shared design tokens ────────────────────────────────────────────
-const C = {
-  surface:   '#0D0D1C',
-  border:    'rgba(255,255,255,0.07)',
-  borderHov: 'rgba(255,255,255,0.13)',
-  accent:    '#7B7FFF',
-  accentDim: 'rgba(123,127,255,0.09)',
-  accentBd:  'rgba(123,127,255,0.28)',
-  teal:      '#2DD4BF',
-  tealDim:   'rgba(45,212,191,0.08)',
-  text:      '#EDF0FF',
-  sub:       '#7A829E',
-  muted:     '#363B52',
-}
+// ── Design tokens ──────────────────────────────────────────────────────────────
+const BG   = '#0A0A0A'
+const S    = '#111111'
+const B    = 'rgba(255,255,255,0.06)'
+const TEAL = '#2DD4BF'
+const T    = '#F5F5F5'
+const TS   = '#888888'
+const TM   = '#444444'
 
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  color,
-}: {
-  icon: React.FC<{ size?: number; strokeWidth?: number }>
-  label: string
-  value: string
-  color: string
-}) {
+// ── Sub-components ─────────────────────────────────────────────────────────────
+
+function FeaturePill({ icon: Icon, label }: { icon: typeof Zap; label: string }) {
   return (
-    <Box
-      bg={C.surface}
-      border={`1px solid ${C.border}`}
-      borderRadius="12px"
-      p={4}
-      transition="border-color 0.2s"
-      _hover={{ borderColor: C.borderHov }}
+    <HStack
+      gap={2} px={3} py="6px"
+      borderRadius="8px"
+      bg={S} border={`1px solid ${B}`}
+      fontSize="12px" fontWeight="500" color={TS}
     >
-      <HStack gap={3.5}>
-        <Flex
-          w="38px" h="38px"
-          borderRadius="9px"
-          bg={`${color}18`}
-          align="center"
-          justify="center"
-          flexShrink={0}
-        >
-          <Icon size={18} strokeWidth={1.8} />
-        </Flex>
-        <Box>
-          <Text fontSize="11px" color={C.muted} fontWeight="500" letterSpacing="0.04em" textTransform="uppercase">
-            {label}
-          </Text>
-          <Text fontSize="sm" color={C.text} fontWeight="600" mt="2px">
-            {value}
-          </Text>
-        </Box>
-      </HStack>
-    </Box>
+      <Icon size={12} strokeWidth={1.8} color={TEAL} />
+      <Text>{label}</Text>
+    </HStack>
   )
 }
 
@@ -81,7 +38,7 @@ function ActionCard({
   onClick,
   accent = false,
 }: {
-  icon: React.FC<{ size?: number; strokeWidth?: number }>
+  icon: typeof Cpu
   title: string
   description: string
   onClick: () => void
@@ -91,263 +48,122 @@ function ActionCard({
 
   return (
     <Box
-      bg={accent
-        ? 'linear-gradient(135deg, rgba(123,127,255,0.11) 0%, rgba(123,127,255,0.04) 100%)'
-        : C.surface}
-      border={accent ? `1px solid ${C.accentBd}` : `1px solid ${C.border}`}
-      borderRadius="14px"
-      p={6}
-      cursor="pointer"
-      onClick={onClick}
+      bg={accent ? 'rgba(45,212,191,0.06)' : S}
+      border={`1px solid ${accent ? 'rgba(45,212,191,0.25)' : B}`}
+      borderRadius="14px" p={5}
+      cursor="pointer" onClick={onClick}
       transition="all 0.2s ease"
       _hover={{
-        bg: accent
-          ? 'linear-gradient(135deg, rgba(123,127,255,0.17) 0%, rgba(123,127,255,0.08) 100%)'
-          : '#111120',
-        borderColor: accent ? 'rgba(123,127,255,0.5)' : C.borderHov,
-        transform: 'translateY(-2px)',
+        bg: accent ? 'rgba(45,212,191,0.1)' : '#161616',
+        borderColor: accent ? 'rgba(45,212,191,0.4)' : 'rgba(255,255,255,0.1)',
+        transform: 'translateY(-1px)',
         boxShadow: accent
-          ? '0 8px 32px rgba(123,127,255,0.12)'
+          ? '0 8px 32px rgba(45,212,191,0.1)'
           : '0 8px 24px rgba(0,0,0,0.4)',
       }}
     >
-      <VStack align="start" gap={4}>
+      <Flex direction="column" gap={4}>
         <Flex
-          w="44px" h="44px"
-          borderRadius="11px"
-          bg={accent ? 'rgba(123,127,255,0.15)' : 'rgba(255,255,255,0.04)'}
-          align="center"
-          justify="center"
+          w="40px" h="40px" borderRadius="10px"
+          bg={accent ? 'rgba(45,212,191,0.15)' : 'rgba(255,255,255,0.04)'}
+          align="center" justify="center"
         >
-          <Icon size={20} strokeWidth={1.7}
-            //color={accent ? C.accent : C.sub}
-          />
+          <Icon size={18} strokeWidth={1.7} color={accent ? TEAL : TS} />
         </Flex>
         <Box>
-          <Text color={C.text} fontWeight="600" fontSize="sm" mb={1.5}>
-            {title}
-          </Text>
-          <Text color={C.sub} fontSize="xs" lineHeight="1.6">
-            {description}
-          </Text>
+          <Text color={T} fontWeight="600" fontSize="13px" mb={1}>{title}</Text>
+          <Text color={TS} fontSize="12px" lineHeight="1.6">{description}</Text>
         </Box>
-        <HStack
-          color={accent ? C.accent : C.muted}
-          fontSize="xs"
-          fontWeight="600"
-          gap={1.5}
-        >
+        <HStack color={accent ? TEAL : TM} fontSize="12px" fontWeight="600" gap={1}>
           <Text>{accent ? t('common.get_started') : t('common.open')}</Text>
-          <ChevronRight size={13} />
+          <ArrowRight size={12} />
         </HStack>
-      </VStack>
+      </Flex>
     </Box>
   )
 }
 
-function FeaturePill({ icon: Icon, label }: { icon: typeof Zap; label: string }) {
-  return (
-    <HStack
-      gap={2}
-      px={3} py="7px"
-      borderRadius="8px"
-      bg={C.surface}
-      border={`1px solid ${C.border}`}
-      fontSize="xs"
-      fontWeight="500"
-      color={C.sub}
-    >
-      <Icon size={13} strokeWidth={1.8} color={C.accent} />
-      <Text>{label}</Text>
-    </HStack>
-  )
-}
+// ── Page ───────────────────────────────────────────────────────────────────────
 
 export function HomePage() {
   const navigate = useNavigate()
-  const { state } = useApp()
   const { t } = useTranslation()
 
-  const hasReport   = !!state.report
-  const hasMacOS    = !!state.selectedMacOS
-  const enabledKexts = state.kexts.filter(k => k.enabled).length
-  const hasProgress = hasReport || hasMacOS || enabledKexts > 0
-
   return (
-    <Box maxW="860px" mx="auto">
-      <VStack gap={10} align="stretch">
+    <Flex direction="column" h="100vh" bg={BG} px={7} py={6} gap={0} overflowY="auto">
 
-        {/* ── Hero ─────────────────────────────────────────────── */}
-        <Box pt={4} pb={2} pos="relative">
-          {/* Badge */}
-          <Flex align="center" gap={2} mb={5}>
-            <Box
-              px="10px" py="4px"
-              borderRadius="20px"
-              bg="rgba(45,212,191,0.08)"
-              border="1px solid rgba(45,212,191,0.2)"
-              fontSize="11px"
-              fontWeight="600"
-              color={C.teal}
-              letterSpacing="0.02em"
-            >
-              OpenCore EFI Builder
-            </Box>
-          </Flex>
-
-          {/* Heading */}
-          <Heading
-            fontSize={{ base: '32px', md: '42px' }}
-            fontWeight="800"
-            letterSpacing="-0.035em"
-            lineHeight={1.12}
-            mb={4}
-            color={C.text}
-          >
-            {t('home.heading')}
-            <Text
-              as="span"
-              display="block"
-              bgGradient="to-r"
-              gradientFrom="#7B7FFF"
-              gradientTo="#2DD4BF"
-              bgClip="text"
-              color="transparent"
-            >
-              freakyOCS
-            </Text>
-          </Heading>
-
-          <Text
-            color={C.sub}
-            fontSize="sm"
-            maxW="500px"
-            lineHeight={1.7}
-            mb={6}
-          >
-            {t('home.subheading')}
+      {/* ── Hero ─────────────────────────────────────────────────────── */}
+      <Box mb={6}>
+        {/* Badge */}
+        <Flex
+          display="inline-flex" align="center" gap={2}
+          px="10px" py="4px" borderRadius="20px" mb={4}
+          bg="rgba(45,212,191,0.07)" border="1px solid rgba(45,212,191,0.18)"
+        >
+          <Box w="6px" h="6px" borderRadius="full" bg={TEAL}
+            boxShadow={`0 0 6px ${TEAL}`} />
+          <Text fontSize="11px" fontWeight="600" color={TEAL} letterSpacing="0.03em">
+            OpenCore EFI Builder
           </Text>
+        </Flex>
 
-          {/* CTA row */}
-          <Flex gap={3} flexWrap="wrap">
-            <Box
-              as="button"
-              onClick={() => navigate('/report')}
-              display="inline-flex" alignItems="center" gap={2}
-              px={5} py="10px"
-              borderRadius="10px"
-              bg={C.accent}
-              color="white"
-              fontSize="sm"
-              fontWeight="600"
-              letterSpacing="-0.01em"
-              transition="all 0.2s"
-              _hover={{
-                bg: '#8F93FF',
-                boxShadow: '0 0 20px rgba(123,127,255,0.4)',
-                transform: 'translateY(-1px)',
-              }}
-            >
-              {t('home.action_start')} <ArrowRight size={15} />
-            </Box>
-            <Box
-              as="button"
-              onClick={() => navigate('/usb')}
-              display="inline-flex" alignItems="center" gap={2}
-              px={5} py="10px"
-              borderRadius="10px"
-              bg="rgba(255,255,255,0.04)"
-              border={`1px solid ${C.border}`}
-              color={C.sub}
-              fontSize="sm"
-              fontWeight="500"
-              transition="all 0.2s"
-              _hover={{ bg: 'rgba(255,255,255,0.07)', borderColor: C.borderHov, color: C.text }}
-            >
-              USB Mapper
-            </Box>
-          </Flex>
-
-          {/* Feature pills */}
-          <Flex gap={2} mt={6} flexWrap="wrap">
-            <FeaturePill icon={Zap}    label="Auto hardware detection" />
-            <FeaturePill icon={Shield} label="Compatibility checker" />
-            <FeaturePill icon={Layers} label="Kext management" />
-          </Flex>
-        </Box>
-
-        {/* Divider */}
-        <Box h="1px" bg={C.border} />
-
-        {/* ── Status Cards (only if wizard has started) ──────── */}
-        {hasProgress && (
-          <>
-            <Box>
-              <Text
-                fontSize="11px"
-                fontWeight="600"
-                color={C.muted}
-                textTransform="uppercase"
-                letterSpacing="0.08em"
-                mb={3}
-              >
-                Current Progress
-              </Text>
-              <SimpleGrid columns={{ base: 1, md: 3 }} gap={3}>
-                <StatCard
-                  icon={Monitor}
-                  label={t('home.stat_hardware')}
-                  value={hasReport ? state.report!.cpu.codename : t('common.not_detected')}
-                  color={hasReport ? '#22C55E' : C.muted}
-                />
-                <StatCard
-                  icon={Apple}
-                  label={t('home.stat_macos')}
-                  value={hasMacOS ? state.selectedMacOS!.name : t('common.not_selected')}
-                  color={hasMacOS ? C.accent : C.muted}
-                />
-                <StatCard
-                  icon={Package}
-                  label={t('home.stat_kexts')}
-                  value={enabledKexts > 0 ? `${enabledKexts} kexts` : t('common.none')}
-                  color={enabledKexts > 0 ? '#EAB308' : C.muted}
-                />
-              </SimpleGrid>
-            </Box>
-            <Box h="1px" bg={C.border} />
-          </>
-        )}
-
-        {/* ── Quick Actions ─────────────────────────────────── */}
-        <Box>
+        {/* Heading */}
+        <Text
+          fontSize="36px" fontWeight="800"
+          letterSpacing="-0.04em" lineHeight={1.1}
+          color={T} mb={2}
+        >
+          {t('home.heading')}
           <Text
-            fontSize="11px"
-            fontWeight="600"
-            color={C.muted}
-            textTransform="uppercase"
-            letterSpacing="0.08em"
-            mb={3}
+            as="span" display="block"
+            style={{
+              background: `linear-gradient(135deg, ${TEAL} 0%, #06B6D4 60%, #818CF8 100%)`,
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
           >
-            Quick Start
+            freakyOCS
           </Text>
-          <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-            <ActionCard
-              icon={Cpu}
-              title={t('home.action_start')}
-              description={t('home.action_start_desc')}
-              onClick={() => navigate('/report')}
-              accent
-            />
-            <ActionCard
-              icon={Usb}
-              title={t('home.action_usb')}
-              description={t('home.action_usb_desc')}
-              onClick={() => navigate('/usb')}
-            />
-          </SimpleGrid>
-        </Box>
+        </Text>
 
-      </VStack>
-    </Box>
+        <Text color={TS} fontSize="13px" maxW="480px" lineHeight={1.7} mb={5}>
+          {t('home.subheading')}
+        </Text>
+
+        {/* Feature pills */}
+        <HStack gap={2} flexWrap="wrap">
+          <FeaturePill icon={Zap}    label={t('home.tips_title') !== 'Tips' ? t('home.tips_title') : 'Auto hardware detection'} />
+          <FeaturePill icon={Shield} label="Compatibility checker" />
+          <FeaturePill icon={Layers} label="Kext management" />
+        </HStack>
+      </Box>
+
+      {/* ── Divider ──────────────────────────────────────────────────── */}
+      <Box h="1px" bg={B} mb={6} />
+
+      {/* ── Quick actions ─────────────────────────────────────────────── */}
+      <Box>
+        <Text fontSize="10px" fontWeight="700" color={TM}
+          textTransform="uppercase" letterSpacing="0.1em" mb={3}>
+          Quick Start
+        </Text>
+        <Flex gap={4} direction={{ base: 'column', md: 'row' }}>
+          <ActionCard
+            icon={Cpu}
+            title={t('home.action_start')}
+            description={t('home.action_start_desc')}
+            onClick={() => navigate('/report')}
+            accent
+          />
+          <ActionCard
+            icon={Usb}
+            title={t('home.action_usb')}
+            description={t('home.action_usb_desc')}
+            onClick={() => navigate('/usb')}
+          />
+        </Flex>
+      </Box>
+    </Flex>
   )
 }
