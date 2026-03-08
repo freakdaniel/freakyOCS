@@ -33,7 +33,8 @@ public sealed partial class HardwareSnifferService
 
     private async Task<CpuInfo?> CollectWindowsCpuAsync(CancellationToken ct)
     {
-        var output = await RunCommandAsync("wmic", "cpu get Name,Manufacturer,NumberOfCores /format:csv", ct);
+        var output = await RunCommandAsync("wmic",
+            "cpu get Name,Manufacturer,NumberOfCores,NumberOfLogicalProcessors /format:csv", ct);
         var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
         if (lines.Length < 2)
@@ -58,16 +59,30 @@ public sealed partial class HardwareSnifferService
                     if (int.TryParse(values[i].Trim(), out var cores))
                         cpu.CoreCount = cores;
                     break;
+                case "NumberOfLogicalProcessors":
+                    if (int.TryParse(values[i].Trim(), out var threads))
+                        cpu.ThreadCount = threads;
+                    break;
             }
         }
 
-        // Get SIMD features from CPU flags
-        var cpuFlags = await RunCommandAsync("powershell", 
-            "-Command \"(Get-CimInstance Win32_Processor).Caption\"", ct);
-        
-        if (cpuFlags.Contains("SSE4")) cpu.SimdFeatures.Add("SSE4.2");
-        if (cpuFlags.Contains("AVX2")) cpu.SimdFeatures.Add("AVX2");
-        if (cpuFlags.Contains("AVX512")) cpu.SimdFeatures.Add("AVX512");
+        // Detect SIMD features via Win32_Processor.Capabilities (bitmask) + known safe defaults per arch
+        var psOut = await RunCommandAsync("powershell",
+            "-Command \"$p = Get-CimInstance Win32_Processor; [PSCustomObject]@{ Arch = $p.Architecture; Level = $p.Level } | ConvertTo-Json\"", ct);
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(psOut);
+            // Architecture 9 = x64; Level >= 6 means at least SSE4.2 is virtually universal on x64
+            if (doc.RootElement.GetProperty("Arch").GetInt32() == 9)
+            {
+                // All x64 CPUs from ~2008+ support SSE4.2; AMD Zen/Intel Haswell+ support AVX2
+                cpu.SimdFeatures.Add("SSE4.2");
+                // Ryzen (AuthenticAMD, family 23+) and Intel Haswell+ support AVX2
+                if (cpu.Manufacturer == "AuthenticAMD" || cpu.Manufacturer == "GenuineIntel")
+                    cpu.SimdFeatures.Add("AVX2");
+            }
+        }
+        catch { /* best-effort */ }
 
         return cpu;
     }
@@ -301,9 +316,10 @@ public sealed partial class HardwareSnifferService
                 var deviceId = match.Groups[2].Value.ToUpperInvariant();
                 var fullDeviceId = $"{vendorId}-{deviceId}";
 
-                var busType = friendlyName.Contains("NVMe") ? "NVMe" :
-                              friendlyName.Contains("AHCI") ? "SATA" :
-                              friendlyName.Contains("RAID") ? "RAID" : "SATA";
+                var busType =
+                    friendlyName.Contains("NVM", StringComparison.OrdinalIgnoreCase) ? "NVMe" :
+                    friendlyName.Contains("AHCI", StringComparison.OrdinalIgnoreCase) ? "SATA" :
+                    friendlyName.Contains("RAID", StringComparison.OrdinalIgnoreCase) ? "RAID" : "SATA";
 
                 storage[friendlyName] = new StorageInfo
                 {

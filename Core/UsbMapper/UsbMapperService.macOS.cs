@@ -191,14 +191,14 @@ public sealed partial class UsbMapperService
 
         if (props.TryGetValue("vendor-id", out var vendorId))
         {
-            controller.Identifiers.PciId ??= new string?[4];
-            controller.Identifiers.PciId[0] = ParseHexValue(vendorId);
+            controller.Identifiers.PciId ??= new string[4];
+            controller.Identifiers.PciId[0] = ParseHexValue(vendorId)!;
         }
 
         if (props.TryGetValue("device-id", out var deviceId))
         {
-            controller.Identifiers.PciId ??= new string?[4];
-            controller.Identifiers.PciId[1] = ParseHexValue(deviceId);
+            controller.Identifiers.PciId ??= new string[4];
+            controller.Identifiers.PciId[1] = ParseHexValue(deviceId)!;
         }
 
         if (props.TryGetValue("acpi-path", out var acpiPath))

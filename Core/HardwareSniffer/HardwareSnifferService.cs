@@ -123,14 +123,24 @@ public sealed partial class HardwareSnifferService
         try
         {
             using var process = new Process();
+
+            // Inject UTF-8 console encoding preamble into PowerShell commands so that
+            // non-ASCII device names (e.g. Russian locale) are not mangled.
+            var isPs = Path.GetFileNameWithoutExtension(command)
+                .Equals("powershell", StringComparison.OrdinalIgnoreCase);
+            var finalArgs = isPs && args.Contains("-Command \"")
+                ? args.Replace("-Command \"", "-Command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; ")
+                : args;
+
             process.StartInfo = new ProcessStartInfo
             {
                 FileName = command,
-                Arguments = args,
+                Arguments = finalArgs,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
-                CreateNoWindow = true
+                CreateNoWindow = true,
+                StandardOutputEncoding = System.Text.Encoding.UTF8,
             };
 
             process.Start();

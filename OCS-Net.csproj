@@ -10,7 +10,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
-  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows')) and '$(Configuration)' == 'Release'">
     <OutputType>WinExe</OutputType>
   </PropertyGroup>
 
@@ -19,9 +19,7 @@
     <PackageReference Include="InfiniLore.InfiniFrame.WebServer" Version="0.1.0-preview.25" />
     <PackageReference Include="plist-cil" Version="2.3.1" />
     <PackageReference Include="NetSparkleUpdater.SparkleUpdater" Version="3.0.4" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.2" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.2" />
-    <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
+<PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="System.Management" Version="10.0.3" />

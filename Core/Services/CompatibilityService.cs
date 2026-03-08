@@ -10,8 +10,7 @@ public sealed class CompatibilityService
 {
     // Darwin version limits
     private static readonly string MaxDarwin = "99.0.0";
-    private static readonly string MinDarwin = "0.0.0";
-    private static readonly string SequoiaMin = "24.0.0"; // macOS Sequoia (15) minimum
+private static readonly string SequoiaMin = "24.0.0"; // macOS Sequoia (15) minimum
 
     public (string? Max, string? Min)? CheckCpuCompatibility(CpuInfo cpu, string targetMacos)
     {

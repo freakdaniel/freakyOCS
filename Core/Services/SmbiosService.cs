@@ -232,6 +232,7 @@ public sealed class CpuInfo
     public string Manufacturer { get; set; } = "";
     public string Codename { get; set; } = "";
     public int CoreCount { get; set; }
+    public int ThreadCount { get; set; }
     public HashSet<string> SimdFeatures { get; set; } = [];
 }
 

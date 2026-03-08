@@ -1,0 +1,184 @@
+{
+  "nav": {
+    "home": "Главная",
+    "report": "Железо",
+    "compatibility": "Совместимость",
+    "macos": "macOS",
+    "acpi": "ACPI",
+    "kexts": "Кексты",
+    "smbios": "SMBIOS",
+    "usb": "USB-маппинг",
+    "build": "Сборка",
+    "result": "Результат",
+    "wizardSteps": "Шаги мастера"
+  },
+  "app": {
+    "name": "freakyOCS",
+    "subtitle": "Конфигуратор OpenCore",
+    "version": "v0.1.0"
+  },
+  "home": {
+    "title": "freakyOCS",
+    "subtitle": "Автоматизированный конструктор EFI OpenCore для хакинтош",
+    "startWizard": "Запустить мастер",
+    "readDocs": "Документация",
+    "stats": {
+      "supportedCPU": "Поддерживаемых CPU",
+      "supportedGPU": "Поддерживаемых GPU",
+      "kextsAvailable": "Доступных кекстов",
+      "macosVersions": "Версий macOS"
+    },
+    "actions": {
+      "scanHardware": "Сканировать железо",
+      "scanHardwareDesc": "Автоопределение конфигурации системы",
+      "loadReport": "Загрузить отчёт",
+      "loadReportDesc": "Импортировать сохранённый отчёт об оборудовании",
+      "checkCompatibility": "Проверить совместимость",
+      "checkCompatibilityDesc": "Проверить оборудование на совместимость с macOS"
+    }
+  },
+  "report": {
+    "title": "Отчёт об оборудовании",
+    "subtitle": "Сканирование или импорт информации о железе.",
+    "autoDetect": "Авто-определение",
+    "autoDetectDesc": "Сканировать оборудование автоматически",
+    "loadFile": "Загрузить из файла",
+    "loadFileDesc": "Импортировать JSON-отчёт об оборудовании",
+    "scanning": "Сканирование оборудования...",
+    "dragDrop": "Перетащите файл отчёта сюда",
+    "orClick": "или нажмите для выбора",
+    "checkCompatibility": "Проверить совместимость"
+  },
+  "compatibility": {
+    "title": "Совместимость",
+    "subtitle": "Проверка совместимости оборудования с macOS.",
+    "supported": "Поддерживается",
+    "limited": "Ограничена",
+    "unsupported": "Не поддерживается",
+    "unknown": "Неизвестно",
+    "blockers": "Блокеры",
+    "warnings": "Предупреждения",
+    "selectMacOS": "Выбрать macOS"
+  },
+  "macos": {
+    "title": "Версия macOS",
+    "subtitle": "Выберите версию macOS для установки.",
+    "loading": "Загрузка версий...",
+    "supported": "Поддерживается",
+    "unsupported": "Не поддерживается",
+    "recommended": "Рекомендуется",
+    "warnings": "Предупреждения"
+  },
+  "acpi": {
+    "title": "Патчи ACPI",
+    "subtitle": "Выберите ACPI SSDT для вашего оборудования.",
+    "searchPlaceholder": "Поиск патчей...",
+    "loading": "Загрузка патчей...",
+    "required": "Обязательные",
+    "recommended": "Рекомендуемые",
+    "optional": "Опциональные",
+    "hardwareSpecific": "Для конкретного железа"
+  },
+  "kexts": {
+    "title": "Кексты",
+    "subtitle": "Настройте кексты для вашего оборудования.",
+    "searchPlaceholder": "Поиск кекстов...",
+    "loading": "Загрузка кекстов...",
+    "enabled": "активно",
+    "all": "Все"
+  },
+  "smbios": {
+    "title": "SMBIOS",
+    "subtitle": "Выберите модель Mac, подходящую для вашего железа.",
+    "searchPlaceholder": "Поиск моделей...",
+    "loading": "Загрузка моделей...",
+    "generate": "Сгенерировать данные SMBIOS",
+    "generating": "Генерация...",
+    "regenerate": "Перегенерировать",
+    "recommended": "Рекомендуется",
+    "generated": "Сгенерированный SMBIOS"
+  },
+  "usb": {
+    "title": "USB-маппинг",
+    "subtitle": "Подключите устройства к каждому порту для определения.",
+    "refresh": "Обновить",
+    "selectPopulated": "Выбрать занятые",
+    "autoRefresh": "Авто-обновление (3с)",
+    "scanning": "Сканирование USB-контроллеров...",
+    "noDevice": "Нет устройства",
+    "portsLabel": "портов",
+    "maxWarning": "Макс 15!",
+    "tip": "Подключите USB-устройство к каждому нужному порту. В macOS ограничение — 15 портов на контроллер."
+  },
+  "build": {
+    "title": "Сборка EFI",
+    "subtitle": "Сгенерировать папку OpenCore EFI.",
+    "summary": "Сводка сборки",
+    "hardwareReport": "Отчёт об оборудовании",
+    "macosVersion": "Версия macOS",
+    "acpiPatches": "Патчи ACPI",
+    "kexts": "Кексты",
+    "smbios": "SMBIOS",
+    "usbPorts": "Порты USB",
+    "loaded": "Загружен",
+    "missing": "Отсутствует",
+    "notSelected": "Не выбрана",
+    "notGenerated": "Не сгенерирован",
+    "enabled": "активно",
+    "mapped": "замаплено",
+    "startBuild": "Начать сборку",
+    "cancel": "Отмена",
+    "retryBuild": "Повторить сборку",
+    "buildFailed": "Сборка не удалась",
+    "stages": {
+      "idle": "Готово к сборке",
+      "downloading-opencore": "Загрузка OpenCore...",
+      "downloading-kexts": "Загрузка кекстов...",
+      "generating-acpi": "Генерация таблиц ACPI...",
+      "generating-config": "Генерация config.plist...",
+      "generating-usb-map": "Генерация USB-маппинга...",
+      "packaging": "Упаковка EFI-папки...",
+      "complete": "Сборка завершена!",
+      "error": "Сборка не удалась"
+    }
+  },
+  "result": {
+    "title": "Результат сборки",
+    "success": "Сборка успешна!",
+    "failed": "Сборка не удалась",
+    "successDesc": "Папка OpenCore EFI создана.",
+    "outputLocation": "Расположение файла",
+    "openFolder": "Открыть папку",
+    "biosSettings": "Настройки BIOS",
+    "requiredForMacos": "Требуется для macOS",
+    "nextSteps": "Следующие шаги",
+    "configSummary": "Сводка конфигурации",
+    "backToBuild": "Назад к сборке",
+    "newBuild": "Новая сборка",
+    "openEfi": "Открыть EFI",
+    "noBuildResult": "Нет результата сборки",
+    "goToBuild": "Перейти к сборке",
+    "required": "Обязательно",
+    "optional": "Опционально"
+  },
+  "common": {
+    "back": "Назад",
+    "next": "Далее",
+    "loading": "Загрузка...",
+    "search": "Поиск",
+    "cancel": "Отмена",
+    "save": "Сохранить",
+    "na": "Н/Д",
+    "get_started": "Начать",
+    "open": "Открыть",
+    "not_detected": "Не обнаружено",
+    "not_selected": "Не выбрано",
+    "none": "Нет"
+  },
+  "lang": {
+    "en": "English",
+    "ru": "Русский",
+    "zh": "中文",
+    "es": "Español"
+  }
+}

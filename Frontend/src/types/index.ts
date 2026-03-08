@@ -169,6 +169,8 @@ export interface SmbiosModel {
   cpuFamily: string
   gpuFamily: string
   recommended: boolean
+  compatible?: boolean
+  hidden?: boolean
   notes?: string
   minMacOS: string
   maxMacOS?: string

@@ -385,13 +385,9 @@ public sealed partial class UsbMapperService
 
                     if (match.Success)
                     {
-                        controller.Identifiers.PciId =
-                        [
-                            match.Groups[1].Value,
-                            match.Groups[2].Value,
-                            match.Groups[3].Success ? match.Groups[3].Value : null,
-                            match.Groups[4].Success ? match.Groups[4].Value : null
-                        ];
+                        controller.Identifiers.PciId = match.Groups[3].Success
+                            ? [match.Groups[1].Value, match.Groups[2].Value, match.Groups[3].Value, match.Groups[4].Value]
+                            : [match.Groups[1].Value, match.Groups[2].Value];
                     }
                 }
             }

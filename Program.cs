@@ -3,6 +3,9 @@ using InfiniFrame.WebServer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OcsNet.Core.Bridge;
+using OcsNet.Core.HardwareSniffer;
+using OcsNet.Core.Services;
+using OcsNet.Core.UsbMapper;
 using Serilog;
 using Serilog.Events;
 using System.Drawing;
@@ -18,32 +21,34 @@ internal class Program
         // ── Serilog Setup ────────────────────────────────────────────────────────────
         var logPath = Path.Combine(
     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-    "OpCore-Simplify",
+    "freakyOCS",
     "logs",
     "app-.log");
 
-Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
 
-Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Debug()
-    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-    .MinimumLevel.Override("System", LogEventLevel.Warning)
-    .Enrich.FromLogContext()
-    .WriteTo.Console(
-        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
-    .WriteTo.File(
-        logPath,
-        rollingInterval: RollingInterval.Day,
-        retainedFileCountLimit: 7,
-        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
-    .CreateLogger();
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Debug()
+            .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+            .MinimumLevel.Override("System", LogEventLevel.Warning)
+            .MinimumLevel.Override("InfiniFrame", LogEventLevel.Warning)
+            .Enrich.FromLogContext()
+            .WriteTo.Console(
+                restrictedToMinimumLevel: LogEventLevel.Information,
+                outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext:l} » {Message:lj}{NewLine}{Exception}")
+            .WriteTo.File(
+                logPath,
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: 7,
+                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext:l} » {Message:lj}{NewLine}{Exception}")
+            .CreateLogger();
 
-try
-{
-    Log.Information("=== OpCore Simplify starting ===");
-    Log.Information("Version: 0.1.0");
-    Log.Information("Runtime: {Runtime}", System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription);
-    Log.Information("OS: {OS}", Environment.OSVersion);
+        try
+        {
+            Log.Information("=== freakyOCS starting ===");
+            Log.Information("Version: 0.1.0");
+            Log.Information("Runtime: {Runtime}", System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription);
+            Log.Information("OS: {OS}", Environment.OSVersion);
 
             var webviewTestMode = args.Any(a => string.Equals(a, "--webview-test", StringComparison.OrdinalIgnoreCase));
 
@@ -57,11 +62,30 @@ try
             });
 
             builder.WebApp.Services.AddSingleton<MessageRouter>();
-
-            // TODO: register services as phases are implemented
-            // builder.WebApp.Services.AddSingleton<DownloadService>();
-            // builder.WebApp.Services.AddSingleton<GitHubService>();
-            // builder.WebApp.Services.AddSingleton<CompatibilityService>();
+            builder.WebApp.Services.AddSingleton<CompatibilityService>();
+            builder.WebApp.Services.AddSingleton<HardwareSnifferService>();
+            builder.WebApp.Services.AddSingleton<ProcessRunner>();
+            builder.WebApp.Services.AddSingleton<AppUtils>();
+            builder.WebApp.Services.AddSingleton<SmbiosService>();
+            builder.WebApp.Services.AddSingleton<ReportValidatorService>();
+            builder.WebApp.Services.AddSingleton<HardwareCustomizerService>();
+            builder.WebApp.Services.AddSingleton<WifiProfileExtractorService>();
+            builder.WebApp.Services.AddSingleton<AcpiGuruService>();
+            builder.WebApp.Services.AddSingleton<DsdtService>();
+            builder.WebApp.Services.AddSingleton<KextService>();
+            builder.WebApp.Services.AddSingleton<ConfigService>();
+            builder.WebApp.Services.AddSingleton<FileGatheringService>();
+            builder.WebApp.Services.AddSingleton<DownloadService>();
+            builder.WebApp.Services.AddSingleton<GitHubService>();
+            builder.WebApp.Services.AddSingleton<HashService>();
+            builder.WebApp.Services.AddSingleton<UsbMapperService>(p =>
+            {
+                var dataDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "freakyOCS");
+                Directory.CreateDirectory(dataDir);
+                return new UsbMapperService(dataDir, p.GetService<ILogger<UsbMapperService>>());
+            });
 
             // ── Static-file wwwroot validation ────────────────────────────────────────
             var wwwroot = Path.Combine(AppContext.BaseDirectory, "wwwroot");
@@ -115,20 +139,20 @@ try
             if (OperatingSystem.IsWindows())
             {
                 var existingArgs = Environment.GetEnvironmentVariable("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS");
-                if (string.IsNullOrWhiteSpace(existingArgs))
-                {
-                    Environment.SetEnvironmentVariable(
-                        "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
-                        "--disable-gpu --disable-gpu-compositing");
-                    Log.Information("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: software rendering workaround applied");
-                }
+                // if (string.IsNullOrWhiteSpace(existingArgs))
+                // {
+                //     Environment.SetEnvironmentVariable(
+                //         "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
+                //         "--disable-gpu --disable-gpu-compositing");
+                //     Log.Information("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: software rendering workaround applied");
+                // }
 
                 var userData = Environment.GetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER");
                 if (string.IsNullOrWhiteSpace(userData))
                 {
                     var appDataDir = Path.Combine(
                         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                        "OpCore-Simplify",
+                        "freakyOCS",
                         "webview2");
                     Directory.CreateDirectory(appDataDir);
                     Environment.SetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER", appDataDir);
@@ -230,7 +254,11 @@ try
             InfiniFrameWebApplication application = builder.Build();
 
             // Assign service provider so the message handler closure can resolve MessageRouter.
-            if (!webviewTestMode) sp = application.WebApp.Services;
+            if (!webviewTestMode)
+            {
+                sp = application.WebApp.Services;
+                HandlersSetup.RegisterAll(sp, sp.GetRequiredService<MessageRouter>());
+            }
 
             application.UseAutoServerClose();
 

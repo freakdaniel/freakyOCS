@@ -1,43 +1,49 @@
-import { useCallback, useState, useEffect } from 'react'
-import {
-  Box,
-  Heading,
-  Text,
-  VStack,
-  HStack,
-  Card,
-  Button,
-  Badge,
-  Progress,
-} from '@chakra-ui/react'
+import { useCallback, useState } from 'react'
+import { Box, Heading, Text, VStack, HStack, Flex } from '@chakra-ui/react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { usePhotinoInvoke, usePhotinoEvent } from '../bridge/usePhotino'
 import type { BuildProgress, BuildResult, BuildStage } from '../types'
+import {
+  Hammer, Download, Package, Settings, FileText, Usb,
+  FolderArchive, CheckCircle2, XCircle, ChevronLeft, ChevronRight, Rocket, Ban,
+} from 'lucide-react'
+
+const S  = '#0D0D1C'
+const B  = 'rgba(255,255,255,0.07)'
+const A  = '#7B7FFF'
+const AD = 'rgba(123,127,255,'
+const T  = '#EDF0FF'
+const TS = '#7A829E'
 
 const stageLabels: Record<BuildStage, string> = {
-  idle: 'Ready to build',
-  'downloading-opencore': 'Downloading OpenCore...',
-  'downloading-kexts': 'Downloading kexts...',
-  'generating-acpi': 'Generating ACPI tables...',
-  'generating-config': 'Generating config.plist...',
-  'generating-usb-map': 'Generating USB map...',
-  packaging: 'Packaging EFI folder...',
-  complete: 'Build complete!',
-  error: 'Build failed',
+  idle:                   'Ready to build',
+  'downloading-opencore': 'Downloading OpenCore…',
+  'downloading-kexts':    'Downloading kexts…',
+  'generating-acpi':      'Generating ACPI tables…',
+  'generating-config':    'Generating config.plist…',
+  'generating-usb-map':   'Generating USB map…',
+  packaging:              'Packaging EFI folder…',
+  complete:               'Build complete!',
+  error:                  'Build failed',
 }
 
-const stageIcons: Record<BuildStage, string> = {
-  idle: '⏸️',
-  'downloading-opencore': '⬇️',
-  'downloading-kexts': '📦',
-  'generating-acpi': '⚙️',
-  'generating-config': '📝',
-  'generating-usb-map': '🔌',
-  packaging: '📁',
-  complete: '✅',
-  error: '❌',
+const stageIcons: Record<BuildStage, React.ReactNode> = {
+  idle:                   <Settings size={15} color={TS} />,
+  'downloading-opencore': <Download size={15} color="#38BDF8" />,
+  'downloading-kexts':    <Package size={15} color="#A78BFA" />,
+  'generating-acpi':      <Settings size={15} color="#EAB308" />,
+  'generating-config':    <FileText size={15} color={A} />,
+  'generating-usb-map':   <Usb size={15} color="#22C55E" />,
+  packaging:              <FolderArchive size={15} color="#f97316" />,
+  complete:               <CheckCircle2 size={15} color="#22C55E" />,
+  error:                  <XCircle size={15} color="#EF4444" />,
 }
+
+const stages: BuildStage[] = [
+  'downloading-opencore', 'downloading-kexts', 'generating-acpi',
+  'generating-config', 'generating-usb-map', 'packaging', 'complete',
+]
 
 export function BuildPage() {
   const navigate = useNavigate()
@@ -46,9 +52,7 @@ export function BuildPage() {
   const [isBuilding, setIsBuilding] = useState(false)
 
   usePhotinoEvent<BuildProgress>('build:progress', (data) => {
-    if (data) {
-      dispatch({ type: 'SET_BUILD_PROGRESS', progress: data })
-    }
+    if (data) dispatch({ type: 'SET_BUILD_PROGRESS', progress: data })
   })
 
   usePhotinoEvent<BuildResult>('build:complete', (data) => {
@@ -63,12 +67,7 @@ export function BuildPage() {
     setIsBuilding(false)
     dispatch({
       type: 'SET_BUILD_PROGRESS',
-      progress: {
-        stage: 'error',
-        progress: 0,
-        message: data ?? 'Unknown error',
-        log: state.buildProgress?.log ?? [],
-      },
+      progress: { stage: 'error', progress: 0, message: data ?? 'Unknown error', log: state.buildProgress?.log ?? [] },
     })
   })
 
@@ -76,9 +75,8 @@ export function BuildPage() {
     setIsBuilding(true)
     dispatch({
       type: 'SET_BUILD_PROGRESS',
-      progress: { stage: 'downloading-opencore', progress: 0, message: 'Starting...', log: [] },
+      progress: { stage: 'downloading-opencore', progress: 0, message: 'Starting…', log: [] },
     })
-
     invoke('build:start', {
       report: state.report,
       macos: state.selectedMacOS,
@@ -94,230 +92,174 @@ export function BuildPage() {
     setIsBuilding(false)
   }, [invoke])
 
-  // Mock build progress for development
-  useEffect(() => {
-    if (!isBuilding || !state.buildProgress) return
-
-    const stages: BuildStage[] = [
-      'downloading-opencore',
-      'downloading-kexts',
-      'generating-acpi',
-      'generating-config',
-      'generating-usb-map',
-      'packaging',
-      'complete',
-    ]
-
-    const currentIndex = stages.indexOf(state.buildProgress.stage)
-    if (currentIndex === -1 || state.buildProgress.stage === 'complete') return
-
-    const timer = setTimeout(() => {
-      const nextStage = stages[currentIndex + 1]
-      const newProgress = {
-        stage: nextStage,
-        progress: ((currentIndex + 2) / stages.length) * 100,
-        message: stageLabels[nextStage],
-        log: [
-          ...state.buildProgress!.log,
-          `[${new Date().toLocaleTimeString()}] ${stageLabels[nextStage]}`,
-        ],
-      }
-      dispatch({ type: 'SET_BUILD_PROGRESS', progress: newProgress })
-
-      if (nextStage === 'complete') {
-        setIsBuilding(false)
-        dispatch({
-          type: 'SET_BUILD_RESULT',
-          result: {
-            success: true,
-            outputPath: 'D:\\EFI',
-            biosSettings: [
-              { name: 'VT-d', recommended: 'Disabled', category: 'CPU', required: true },
-              { name: 'CFG Lock', recommended: 'Disabled', category: 'CPU', required: true },
-              { name: 'Secure Boot', recommended: 'Disabled', category: 'Boot', required: true },
-              { name: 'Fast Boot', recommended: 'Disabled', category: 'Boot', required: false },
-              { name: 'XHCI Hand-off', recommended: 'Enabled', category: 'USB', required: true },
-            ],
-            nextSteps: [
-              'Copy EFI folder to your USB installer',
-              'Configure BIOS settings as shown',
-              'Boot from USB and install macOS',
-              'After install, copy EFI to internal drive',
-            ],
-          },
-        })
-        navigate('/result')
-      }
-    }, 1500)
-
-    return () => clearTimeout(timer)
-  }, [isBuilding, state.buildProgress, dispatch, navigate])
-
   const canBuild = state.report && state.selectedMacOS && state.smbios
+  const currentStageIndex = state.buildProgress ? stages.indexOf(state.buildProgress.stage) : -1
+  const progressPercent   = state.buildProgress?.progress ?? 0
 
   return (
-    <Box maxW="4xl" mx="auto">
+    <Box maxW="860px" mx="auto">
       <VStack gap={6} align="stretch">
         {/* Header */}
-        <VStack gap={2} align="start">
-          <HStack>
-            <Text fontSize="2xl">🔨</Text>
-            <Heading size="xl">Build EFI</Heading>
+        <Box>
+          <HStack gap={3} mb={1.5}>
+            <Flex w="34px" h="34px" borderRadius="8px" bg={`${AD}0.12)`} align="center" justify="center">
+              <Hammer size={17} color={A} />
+            </Flex>
+            <Heading size="lg" color={T} fontWeight="700" letterSpacing="-0.02em">Build EFI</Heading>
           </HStack>
-          <Text color="fg.muted">
-            Generate your OpenCore EFI folder with all configured options.
-          </Text>
-        </VStack>
+          <Text color={TS} fontSize="sm">Generate your OpenCore EFI folder with all configured options.</Text>
+        </Box>
 
         {/* Pre-build Summary */}
         {!isBuilding && !state.buildProgress && (
-          <Card.Root>
-            <Card.Header>
-              <Heading size="md">Build Summary</Heading>
-            </Card.Header>
-            <Card.Body>
-              <VStack align="stretch" gap={3}>
-                <HStack justify="space-between">
-                  <Text color="fg.muted">Hardware Report</Text>
-                  <Badge colorPalette={state.report ? 'green' : 'red'}>
-                    {state.report ? '✅ Loaded' : '❌ Missing'}
-                  </Badge>
-                </HStack>
-                <HStack justify="space-between">
-                  <Text color="fg.muted">macOS Version</Text>
-                  <Badge colorPalette={state.selectedMacOS ? 'green' : 'red'}>
-                    {state.selectedMacOS?.name ?? '❌ Not selected'}
-                  </Badge>
-                </HStack>
-                <HStack justify="space-between">
-                  <Text color="fg.muted">ACPI Patches</Text>
-                  <Badge colorPalette="blue">
-                    {state.acpiPatches.filter((p) => p.enabled).length} enabled
-                  </Badge>
-                </HStack>
-                <HStack justify="space-between">
-                  <Text color="fg.muted">Kexts</Text>
-                  <Badge colorPalette="purple">
-                    {state.kexts.filter((k) => k.enabled).length} enabled
-                  </Badge>
-                </HStack>
-                <HStack justify="space-between">
-                  <Text color="fg.muted">SMBIOS</Text>
-                  <Badge colorPalette={state.smbios ? 'green' : 'red'}>
-                    {state.smbios?.model ?? '❌ Not generated'}
-                  </Badge>
-                </HStack>
-                <HStack justify="space-between">
-                  <Text color="fg.muted">USB Ports</Text>
-                  <Badge colorPalette="orange">
-                    {state.usbControllers.reduce(
-                      (acc, c) => acc + c.ports.filter((p) => p.selected).length,
-                      0
-                    )}{' '}
-                    mapped
-                  </Badge>
-                </HStack>
-              </VStack>
-            </Card.Body>
-            <Card.Footer>
-              <Button
-                colorPalette="brand"
-                size="lg"
-                w="full"
-                onClick={startBuild}
-                disabled={!canBuild}
+          <Box bg={S} border={`1px solid ${B}`} borderRadius="12px" overflow="hidden">
+            <Box px={5} py={3} borderBottom={`1px solid ${B}`}>
+              <Text color={T} fontWeight="600" fontSize="sm">Build Summary</Text>
+            </Box>
+            <VStack align="stretch" gap={0} px={5} py={3}>
+              {[
+                { label: 'Hardware Report', value: state.report ? 'Loaded' : 'Missing',          ok: !!state.report },
+                { label: 'macOS Version',   value: state.selectedMacOS?.name ?? 'Not selected',   ok: !!state.selectedMacOS },
+                { label: 'ACPI Patches',    value: `${state.acpiPatches.filter((p) => p.enabled).length} enabled`, ok: true },
+                { label: 'Kexts',           value: `${state.kexts.filter((k) => k.enabled).length} enabled`,       ok: true },
+                { label: 'SMBIOS',          value: state.smbios?.model ?? 'Not generated',        ok: !!state.smbios },
+                { label: 'USB Ports',       value: `${state.usbControllers.reduce((a, c) => a + c.ports.filter((p) => p.selected).length, 0)} mapped`, ok: true },
+              ].map((item) => (
+                <Flex key={item.label} justify="space-between" align="center" py={2.5} borderBottom={`1px solid rgba(255,255,255,0.04)`}>
+                  <Text color={TS} fontSize="sm">{item.label}</Text>
+                  <Box
+                    px={2} py={0.5} borderRadius="5px" fontSize="xs" fontWeight="600"
+                    bg={item.ok ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)'}
+                    color={item.ok ? '#22C55E' : '#EF4444'}
+                  >
+                    {item.value}
+                  </Box>
+                </Flex>
+              ))}
+            </VStack>
+            <Box px={5} py={4}>
+              <Box
+                as="button" w="100%" py="10px" borderRadius="10px"
+                bg={canBuild ? A : `${AD}0.3)`}
+                color="white" fontWeight="600" fontSize="sm"
+                _hover={canBuild ? { bg: '#8F93FF', boxShadow: '0 0 20px rgba(123,127,255,0.3)' } : {}}
+                cursor={canBuild ? 'pointer' : 'not-allowed'}
+                onClick={() => canBuild && startBuild()}
+                display="flex" alignItems="center" justifyContent="center" gap={2}
+                transition="all 0.2s"
               >
-                🚀 Start Build
-              </Button>
-            </Card.Footer>
-          </Card.Root>
+                <Rocket size={15} /> Start Build
+              </Box>
+            </Box>
+          </Box>
         )}
 
         {/* Build Progress */}
         {(isBuilding || state.buildProgress) && state.buildProgress?.stage !== 'error' && (
-          <Card.Root>
-            <Card.Header>
-              <HStack justify="space-between">
-                <HStack>
-                  <Text fontSize="xl">{stageIcons[state.buildProgress?.stage ?? 'idle']}</Text>
-                  <Heading size="md">{stageLabels[state.buildProgress?.stage ?? 'idle']}</Heading>
-                </HStack>
-                {isBuilding && (
-                  <Button size="sm" colorPalette="red" variant="outline" onClick={cancelBuild}>
-                    Cancel
-                  </Button>
-                )}
+          <Box bg={S} border={`1px solid ${AD}0.18)`} borderRadius="12px" overflow="hidden">
+            <Flex justify="space-between" align="center" px={5} py={3} borderBottom={`1px solid ${B}`}>
+              <HStack gap={2}>
+                {stageIcons[state.buildProgress?.stage ?? 'idle']}
+                <Text color={T} fontWeight="600" fontSize="sm">{stageLabels[state.buildProgress?.stage ?? 'idle']}</Text>
               </HStack>
-            </Card.Header>
-            <Card.Body>
-              <VStack align="stretch" gap={4}>
-                <Progress.Root value={state.buildProgress?.progress ?? 0}>
-                  <Progress.Track>
-                    <Progress.Range />
-                  </Progress.Track>
-                </Progress.Root>
-                <Text color="fg.muted" textAlign="center">
-                  {state.buildProgress?.message}
-                </Text>
-              </VStack>
-            </Card.Body>
-          </Card.Root>
+              {isBuilding && (
+                <Box
+                  as="button" px={3} py={1.5} borderRadius="6px"
+                  bg="rgba(239,68,68,0.08)" color="#EF4444"
+                  fontSize="xs" fontWeight="500"
+                  _hover={{ bg: 'rgba(239,68,68,0.14)' }}
+                  onClick={cancelBuild} display="flex" alignItems="center" gap={1}
+                >
+                  <Ban size={11} /> Cancel
+                </Box>
+              )}
+            </Flex>
+            <Box px={5} py={4}>
+              {/* Progress bar */}
+              <Box w="100%" bg="rgba(255,255,255,0.05)" borderRadius="full" h="5px" mb={3}>
+                <Box bg={A} borderRadius="full" h="100%" w={`${progressPercent}%`} transition="width 0.4s ease" boxShadow={`0 0 8px ${AD}0.5)`} />
+              </Box>
+              <Text color={TS} fontSize="sm" textAlign="center">{state.buildProgress?.message}</Text>
+
+              {/* Stage indicators */}
+              <Flex justify="space-between" mt={4} px={2}>
+                {stages.slice(0, -1).map((stage, i) => {
+                  const isDone    = i < currentStageIndex
+                  const isCurrent = i === currentStageIndex
+                  return (
+                    <VStack key={stage} gap={1}>
+                      <Flex
+                        w="26px" h="26px" borderRadius="full"
+                        bg={isDone ? 'rgba(34,197,94,0.1)' : isCurrent ? `${AD}0.13)` : 'rgba(255,255,255,0.04)'}
+                        border={isCurrent ? `2px solid ${AD}0.35)` : 'none'}
+                        align="center" justify="center"
+                      >
+                        {isDone ? <CheckCircle2 size={13} color="#22C55E" /> : stageIcons[stage]}
+                      </Flex>
+                    </VStack>
+                  )
+                })}
+              </Flex>
+            </Box>
+          </Box>
         )}
 
         {/* Build Log */}
         {state.buildProgress && state.buildProgress.log.length > 0 && (
-          <Card.Root>
-            <Card.Header>
-              <Heading size="sm">Build Log</Heading>
-            </Card.Header>
-            <Card.Body p={0}>
-              <Box
-                bg="gray.900"
-                color="gray.100"
-                p={4}
-                borderRadius="md"
-                fontFamily="mono"
-                fontSize="sm"
-                maxH="300px"
-                overflowY="auto"
-              >
-                {state.buildProgress.log.map((line, i) => (
-                  <Text key={i}>{line}</Text>
-                ))}
-              </Box>
-            </Card.Body>
-          </Card.Root>
+          <Box bg={S} border={`1px solid ${B}`} borderRadius="12px" overflow="hidden">
+            <Box px={5} py={3} borderBottom={`1px solid ${B}`}>
+              <Text color={T} fontWeight="600" fontSize="sm">Build Log</Text>
+            </Box>
+            <Box px={4} py={3} maxH="240px" overflowY="auto" fontFamily="mono" fontSize="xs">
+              {state.buildProgress.log.map((line, i) => (
+                <Text key={i} color={TS} py={0.5}>{line}</Text>
+              ))}
+            </Box>
+          </Box>
         )}
 
         {/* Error */}
         {state.buildProgress?.stage === 'error' && (
-          <Card.Root bg="red.subtle">
-            <Card.Body>
-              <VStack gap={4}>
-                <Text fontSize="3xl">❌</Text>
-                <Heading size="md" color="red.fg">
-                  Build Failed
-                </Heading>
-                <Text>{state.buildProgress.message}</Text>
-                <Button colorPalette="red" onClick={startBuild}>
-                  Retry
-                </Button>
-              </VStack>
-            </Card.Body>
-          </Card.Root>
+          <Box bg="rgba(239,68,68,0.05)" border="1px solid rgba(239,68,68,0.18)" borderRadius="12px" p={6}>
+            <VStack gap={4}>
+              <XCircle size={32} color="#EF4444" />
+              <Heading size="md" color="#EF4444">Build Failed</Heading>
+              <Text color={TS} fontSize="sm" textAlign="center">{state.buildProgress.message}</Text>
+              <Box
+                as="button" px={5} py={2} borderRadius="8px"
+                bg="rgba(239,68,68,0.12)" color="#EF4444"
+                fontSize="sm" fontWeight="600"
+                _hover={{ bg: 'rgba(239,68,68,0.18)' }}
+                onClick={startBuild}
+              >
+                Retry Build
+              </Box>
+            </VStack>
+          </Box>
         )}
 
         {/* Navigation */}
-        <HStack justify="space-between">
-          <Button variant="outline" onClick={() => navigate('/usb')} disabled={isBuilding}>
-            ← USB Mapper
-          </Button>
+        <Flex justify="space-between">
+          <Box
+            as="button" px={4} py="8px" borderRadius="8px"
+            bg="rgba(255,255,255,0.04)" color={TS} fontSize="sm" fontWeight="500"
+            _hover={{ bg: 'rgba(255,255,255,0.07)', color: T }}
+            onClick={() => navigate('/usb')} display="flex" alignItems="center" gap={2}
+            opacity={isBuilding ? 0.4 : 1} pointerEvents={isBuilding ? 'none' : 'auto'}
+          >
+            <ChevronLeft size={14} /> USB Mapper
+          </Box>
           {state.buildResult && (
-            <Button colorPalette="brand" onClick={() => navigate('/result')}>
-              View Result →
-            </Button>
+            <Box
+              as="button" px={4} py="8px" borderRadius="8px"
+              bg={A} color="white" fontSize="sm" fontWeight="600"
+              _hover={{ bg: '#8F93FF', boxShadow: '0 0 16px rgba(123,127,255,0.3)' }}
+              onClick={() => navigate('/result')} display="flex" alignItems="center" gap={2}
+            >
+              View Result <ChevronRight size={14} />
+            </Box>
           )}
-        </HStack>
+        </Flex>
       </VStack>
     </Box>
   )

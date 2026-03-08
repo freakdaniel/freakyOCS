@@ -28,8 +28,20 @@ function init() {
   if (isInitialized) return
   isInitialized = true
 
-  // InfiniFrame / Photino delivers messages by calling this function
-  if (typeof window !== 'undefined' && window.external) {
+  if (typeof window === 'undefined') return
+
+  // Windows WebView2: C# PostWebMessageAsString → fires 'message' on window.chrome.webview
+  const webview = (
+    window as unknown as {
+      chrome?: { webview?: { addEventListener: (type: string, handler: (e: MessageEvent<string>) => void) => void } }
+    }
+  ).chrome?.webview
+  if (webview?.addEventListener) {
+    webview.addEventListener('message', e => dispatch(e.data))
+  }
+
+  // macOS/Linux Photino (WebKit/GTK): C# calls window.external.receiveMessage(jsonString)
+  if (window.external) {
     const ext = window.external as unknown as Record<string, unknown>
     const prev = ext['receiveMessage'] as ((msg: string) => void) | undefined
     ext['receiveMessage'] = (msg: string) => {

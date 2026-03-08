@@ -1,64 +1,41 @@
 import { useEffect, useState } from 'react'
-import {
-  Box,
-  Heading,
-  Text,
-  VStack,
-  HStack,
-  Card,
-  Button,
-  Badge,
-  Spinner,
-  Checkbox,
-  Input,
-} from '@chakra-ui/react'
+import { Box, Heading, Text, VStack, HStack, Flex, Spinner, Input } from '@chakra-ui/react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { usePhotinoInvoke, usePhotinoEvent } from '../bridge/usePhotino'
 import type { AcpiPatch } from '../types'
+import { CircuitBoard, Search, ChevronLeft, ChevronRight, Check, Lock } from 'lucide-react'
+
+const S  = '#0D0D1C'
+const B  = 'rgba(255,255,255,0.07)'
+const A  = '#7B7FFF'
+const AD = 'rgba(123,127,255,'
+const T  = '#EDF0FF'
+const TS = '#7A829E'
+const TM = '#363B52'
 
 const categoryColors: Record<string, string> = {
-  Required: 'red',
-  Recommended: 'yellow',
-  Optional: 'blue',
-  'Hardware-Specific': 'purple',
+  Required:          '#EF4444',
+  Recommended:       '#EAB308',
+  Optional:          '#60A5FA',
+  'Hardware-Specific': '#A78BFA',
 }
 
 export function AcpiPatchesPage() {
-  const navigate = useNavigate()
+  const navigate   = useNavigate()
   const { state, dispatch } = useApp()
-  const invoke = usePhotinoInvoke()
+  const invoke     = usePhotinoInvoke()
   const [isLoading, setIsLoading] = useState(true)
-  const [filter, setFilter] = useState('')
+  const [filter, setFilter]       = useState('')
 
   usePhotinoEvent<AcpiPatch[]>('acpi:patches', (data) => {
     setIsLoading(false)
-    if (data) {
-      dispatch({ type: 'SET_ACPI_PATCHES', patches: data })
-    }
+    if (data) dispatch({ type: 'SET_ACPI_PATCHES', patches: data })
   })
 
   useEffect(() => {
     invoke('acpi:list', { report: state.report, macos: state.selectedMacOS })
   }, [invoke, state.report, state.selectedMacOS])
-
-  // Mock data for development
-  useEffect(() => {
-    const mockPatches: AcpiPatch[] = [
-      { id: 'ssdt-plug', name: 'SSDT-PLUG', description: 'CPU power management fix', category: 'Required', enabled: true, required: true },
-      { id: 'ssdt-ec', name: 'SSDT-EC', description: 'Embedded Controller fix', category: 'Required', enabled: true, required: true },
-      { id: 'ssdt-awac', name: 'SSDT-AWAC', description: 'AWAC clock fix (300-series+)', category: 'Hardware-Specific', enabled: false, required: false },
-      { id: 'ssdt-rhub', name: 'SSDT-RHUB', description: 'USB RHUB reset', category: 'Optional', enabled: false, required: false },
-      { id: 'ssdt-pnlf', name: 'SSDT-PNLF', description: 'Backlight fix for laptops', category: 'Hardware-Specific', enabled: false, required: false },
-      { id: 'ssdt-sbus-mchc', name: 'SSDT-SBUS-MCHC', description: 'SMBus support', category: 'Recommended', enabled: true, required: false },
-      { id: 'ssdt-usbx', name: 'SSDT-USBX', description: 'USB power properties', category: 'Required', enabled: true, required: true },
-      { id: 'ssdt-xosi', name: 'SSDT-XOSI', description: 'OS detection spoof', category: 'Optional', enabled: false, required: false },
-    ]
-    setTimeout(() => {
-      dispatch({ type: 'SET_ACPI_PATCHES', patches: mockPatches })
-      setIsLoading(false)
-    }, 300)
-  }, [dispatch])
 
   const filteredPatches = state.acpiPatches.filter(
     (p) =>
@@ -66,118 +43,117 @@ export function AcpiPatchesPage() {
       p.description.toLowerCase().includes(filter.toLowerCase())
   )
 
-  const groupedPatches = filteredPatches.reduce(
-    (acc, patch) => {
-      const cat = patch.category
-      if (!acc[cat]) acc[cat] = []
-      acc[cat].push(patch)
-      return acc
-    },
-    {} as Record<string, AcpiPatch[]>
-  )
+  const groupedPatches = filteredPatches.reduce((acc, patch) => {
+    const cat = patch.category
+    if (!acc[cat]) acc[cat] = []
+    acc[cat].push(patch)
+    return acc
+  }, {} as Record<string, AcpiPatch[]>)
 
   const enabledCount = state.acpiPatches.filter((p) => p.enabled).length
 
   return (
-    <Box maxW="4xl" mx="auto">
+    <Box maxW="860px" mx="auto">
       <VStack gap={6} align="stretch">
         {/* Header */}
-        <VStack gap={2} align="start">
-          <HStack justify="space-between" w="full">
-            <HStack>
-              <Text fontSize="2xl">⚙️</Text>
-              <Heading size="xl">ACPI Patches</Heading>
+        <Flex justify="space-between" align="start">
+          <Box>
+            <HStack gap={3} mb={1.5}>
+              <Flex w="34px" h="34px" borderRadius="8px" bg="rgba(45,212,191,0.12)" align="center" justify="center">
+                <CircuitBoard size={17} color="#2DD4BF" />
+              </Flex>
+              <Heading size="lg" color={T} fontWeight="700" letterSpacing="-0.02em">ACPI Patches</Heading>
             </HStack>
-            <Badge colorPalette="brand" size="lg">
-              {enabledCount} enabled
-            </Badge>
-          </HStack>
-          <Text color="fg.muted">
-            Select ACPI tables (SSDTs) needed for your hardware.
-          </Text>
-        </VStack>
+            <Text color={TS} fontSize="sm">Select ACPI tables (SSDTs) needed for your hardware.</Text>
+          </Box>
+          <Box px={3} py={1.5} borderRadius="8px" bg={`${AD}0.1)`}
+            fontSize="xs" fontWeight="700" color={A} letterSpacing="-0.01em">
+            {enabledCount} enabled
+          </Box>
+        </Flex>
 
         {/* Search */}
-        <Input
-          placeholder="Search patches..."
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        />
+        <Box position="relative">
+          <Box position="absolute" left={3} top="50%" transform="translateY(-50%)" zIndex={1}>
+            <Search size={14} color={TS} />
+          </Box>
+          <Input
+            pl={9} placeholder="Search patches…"
+            value={filter} onChange={(e) => setFilter(e.target.value)}
+            bg={S} border={`1px solid ${B}`} borderRadius="10px"
+            color={T} fontSize="sm"
+            _placeholder={{ color: TM }}
+            _focus={{ borderColor: `${AD}0.4)`, outline: 'none' }}
+          />
+        </Box>
 
         {isLoading ? (
-          <Card.Root>
-            <Card.Body>
-              <VStack gap={4} py={8}>
-                <Spinner size="xl" colorPalette="brand" />
-                <Text>Loading patches...</Text>
-              </VStack>
-            </Card.Body>
-          </Card.Root>
+          <Box bg={S} border={`1px solid ${B}`} borderRadius="12px" p={8}>
+            <VStack gap={4}><Spinner size="xl" color={A} /><Text color={TS} fontSize="sm">Loading patches…</Text></VStack>
+          </Box>
         ) : (
           Object.entries(groupedPatches).map(([category, patches]) => (
-            <Card.Root key={category}>
-              <Card.Header pb={2}>
-                <HStack>
-                  <Badge colorPalette={categoryColors[category] ?? 'gray'}>
-                    {category}
-                  </Badge>
-                  <Text color="fg.muted" fontSize="sm">
-                    {patches.length} patches
-                  </Text>
-                </HStack>
-              </Card.Header>
-              <Card.Body pt={0}>
-                <VStack align="stretch" gap={2}>
-                  {patches.map((patch) => (
-                    <HStack
-                      key={patch.id}
-                      p={3}
-                      bg="bg.subtle"
-                      borderRadius="md"
-                      justify="space-between"
-                    >
+            <Box key={category}>
+              <HStack gap={2} mb={2.5}>
+                <Box w="6px" h="6px" borderRadius="full" bg={categoryColors[category] ?? TS} />
+                <Text fontSize="10px" fontWeight="700" color={TS} textTransform="uppercase" letterSpacing="0.08em">
+                  {category}
+                </Text>
+              </HStack>
+              <VStack gap={1.5} align="stretch">
+                {patches.map((patch) => (
+                  <Box
+                    key={patch.id}
+                    bg={patch.enabled ? `${AD}0.07)` : S}
+                    border={patch.enabled ? `1px solid ${AD}0.25)` : `1px solid ${B}`}
+                    borderRadius="10px" px={4} py={3}
+                    cursor={patch.required ? 'default' : 'pointer'}
+                    onClick={() => !patch.required && dispatch({ type: 'TOGGLE_ACPI_PATCH', id: patch.id })}
+                    _hover={!patch.required ? { borderColor: `${AD}0.3)` } : {}}
+                    transition="all 0.15s ease"
+                  >
+                    <Flex justify="space-between" align="center">
                       <HStack gap={3}>
-                        <Checkbox.Root
-                          checked={patch.enabled}
-                          disabled={patch.required}
-                          onCheckedChange={() =>
-                            dispatch({ type: 'TOGGLE_ACPI_PATCH', id: patch.id })
-                          }
+                        {/* Checkbox */}
+                        <Box
+                          w="18px" h="18px" borderRadius="5px" flexShrink={0}
+                          bg={patch.enabled ? A : 'transparent'}
+                          border={patch.enabled ? 'none' : `2px solid rgba(255,255,255,0.12)`}
+                          display="flex" alignItems="center" justifyContent="center"
                         >
-                          <Checkbox.HiddenInput />
-                          <Checkbox.Control />
-                        </Checkbox.Root>
-                        <VStack align="start" gap={0}>
-                          <HStack>
-                            <Text fontWeight="semibold">{patch.name}</Text>
-                            {patch.required && (
-                              <Badge colorPalette="red" size="sm">
-                                Required
-                              </Badge>
-                            )}
+                          {patch.enabled && <Check size={11} color="white" strokeWidth={3} />}
+                        </Box>
+                        <Box>
+                          <HStack gap={2}>
+                            <Text color={T} fontWeight="500" fontSize="sm">{patch.name}</Text>
+                            {patch.required && <Lock size={11} color={TM} />}
                           </HStack>
-                          <Text color="fg.muted" fontSize="sm">
-                            {patch.description}
-                          </Text>
-                        </VStack>
+                          <Text color={TS} fontSize="xs">{patch.description}</Text>
+                        </Box>
                       </HStack>
-                    </HStack>
-                  ))}
-                </VStack>
-              </Card.Body>
-            </Card.Root>
+                    </Flex>
+                  </Box>
+                ))}
+              </VStack>
+            </Box>
           ))
         )}
 
         {/* Navigation */}
-        <HStack justify="space-between">
-          <Button variant="outline" onClick={() => navigate('/macos')}>
-            ← macOS
-          </Button>
-          <Button colorPalette="brand" onClick={() => navigate('/kexts')}>
-            Configure Kexts →
-          </Button>
-        </HStack>
+        <Flex justify="space-between">
+          <Box as="button" px={4} py="8px" borderRadius="8px"
+            bg="rgba(255,255,255,0.04)" color={TS} fontSize="sm" fontWeight="500"
+            _hover={{ bg: 'rgba(255,255,255,0.08)', color: T }}
+            onClick={() => navigate('/macos')} display="flex" alignItems="center" gap={2}>
+            <ChevronLeft size={14} /> macOS
+          </Box>
+          <Box as="button" px={4} py="8px" borderRadius="8px"
+            bg={A} color="white" fontSize="sm" fontWeight="600"
+            _hover={{ bg: '#8F93FF', boxShadow: '0 0 16px rgba(123,127,255,0.3)' }}
+            onClick={() => navigate('/kexts')} display="flex" alignItems="center" gap={2}>
+            Configure Kexts <ChevronRight size={14} />
+          </Box>
+        </Flex>
       </VStack>
     </Box>
   )
