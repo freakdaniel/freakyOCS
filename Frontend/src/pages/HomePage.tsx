@@ -94,19 +94,6 @@ export function HomePage() {
 
       {/* ── Hero ─────────────────────────────────────────────────────── */}
       <Box mb={6}>
-        {/* Badge */}
-        <Flex
-          display="inline-flex" align="center" gap={2}
-          px="10px" py="4px" borderRadius="20px" mb={4}
-          bg="rgba(45,212,191,0.07)" border="1px solid rgba(45,212,191,0.18)"
-        >
-          <Box w="6px" h="6px" borderRadius="full" bg={TEAL}
-            boxShadow={`0 0 6px ${TEAL}`} />
-          <Text fontSize="11px" fontWeight="600" color={TEAL} letterSpacing="0.03em">
-            OpenCore EFI Builder
-          </Text>
-        </Flex>
-
         {/* Heading */}
         <Text
           fontSize="36px" fontWeight="800"
@@ -114,17 +101,6 @@ export function HomePage() {
           color={T} mb={2}
         >
           {t('home.heading')}
-          <Text
-            as="span" display="block"
-            style={{
-              background: `linear-gradient(135deg, ${TEAL} 0%, #06B6D4 60%, #818CF8 100%)`,
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            }}
-          >
-            freakyOCS
-          </Text>
         </Text>
 
         <Text color={TS} fontSize="13px" maxW="480px" lineHeight={1.7} mb={5}>

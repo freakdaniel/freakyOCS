@@ -54,11 +54,11 @@ export function BuildPage() {
     }
   })
 
-  usePhotinoEvent<string>('build:error', (data) => {
+  usePhotinoEvent<string>('build:error', (data, response) => {
     setIsBuilding(false)
     dispatch({
       type: 'SET_BUILD_PROGRESS',
-      progress: { stage: 'error', progress: 0, message: data ?? 'Unknown error', log: state.buildProgress?.log ?? [] },
+      progress: { stage: 'error', progress: 0, message: response.error ?? data ?? 'Unknown error', log: state.buildProgress?.log ?? [] },
     })
   })
 

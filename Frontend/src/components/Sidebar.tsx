@@ -1,6 +1,7 @@
 import { Box, Text, Flex } from "@chakra-ui/react"
 import { Link, useLocation } from "react-router-dom"
 import { useTranslation } from "react-i18next"
+import { useRef, useState, useEffect, type RefObject } from "react"
 import {
   Home,
   Cpu,
@@ -38,33 +39,15 @@ const stepIcons: Record<string, LucideIcon> = {
 
 const LANGS = ["en", "ru", "zh", "es"] as const
 
-// ── Logo Mark ──────────────────────────────────────────────────────────────────
-function LogoMark() {
-  return (
-    <Box
-      w="28px" h="28px" borderRadius="7px"
-      background={`linear-gradient(135deg, ${TEAL} 0%, #06B6D4 100%)`}
-      display="flex" alignItems="center" justifyContent="center"
-      flexShrink={0}
-      boxShadow={`0 0 14px rgba(45,212,191,0.4)`}
-    >
-      {/* Small geometric cutout */}
-      <Box
-        w="9px" h="9px" borderRadius="2px"
-        bg="rgba(0,0,0,0.4)"
-      />
-    </Box>
-  )
-}
-
 // ── Step Node ──────────────────────────────────────────────────────────────────
 interface StepNodeProps {
-  isActive: boolean
-  isPast: boolean
-  Icon: LucideIcon
+  isActive:  boolean
+  isPast:    boolean
+  Icon:      LucideIcon
+  isHovered: boolean
 }
 
-function StepNode({ isActive, isPast, Icon }: StepNodeProps) {
+function StepNode({ isActive, isPast, Icon, isHovered }: StepNodeProps) {
   if (isActive) {
     return (
       <Flex
@@ -72,10 +55,14 @@ function StepNode({ isActive, isPast, Icon }: StepNodeProps) {
         border={`2px solid ${TEAL}`}
         align="center" justify="center"
         className="timeline-active"
-        bg={`rgba(45,212,191,0.1)`}
+        bg="rgba(45,212,191,0.12)"
         position="relative" zIndex={2}
+        style={{ transform: 'scale(1.12)', transition: 'transform 0.4s cubic-bezier(0.34,1.56,0.64,1)' }}
       >
-        <Box w="7px" h="7px" borderRadius="full" bg={TEAL} />
+        <Box
+          w="7px" h="7px" borderRadius="full" bg={TEAL}
+          style={{ boxShadow: `0 0 8px ${TEAL}, 0 0 16px rgba(45,212,191,0.4)` }}
+        />
       </Flex>
     )
   }
@@ -87,37 +74,77 @@ function StepNode({ isActive, isPast, Icon }: StepNodeProps) {
         bg={TEAL}
         align="center" justify="center"
         position="relative" zIndex={2}
+        style={{
+          boxShadow:  isHovered ? '0 0 16px rgba(45,212,191,0.55)' : '0 0 0px transparent',
+          transform:  isHovered ? 'scale(1.1)'  : 'scale(1)',
+          transition: 'box-shadow 0.3s ease, transform 0.3s cubic-bezier(0.34,1.56,0.64,1)',
+        }}
       >
         <Check size={11} strokeWidth={2.5} color="#0A0A0A" />
       </Flex>
     )
   }
 
-  // Future step
   return (
     <Flex
       w="24px" h="24px" borderRadius="full" flexShrink={0}
-      border="1.5px solid rgba(255,255,255,0.08)"
       align="center" justify="center"
-      bg="rgba(255,255,255,0.02)"
       position="relative" zIndex={2}
+      style={{
+        border:     isHovered ? '1.5px solid rgba(45,212,191,0.4)' : '1.5px solid rgba(255,255,255,0.08)',
+        background: isHovered ? 'rgba(45,212,191,0.07)'           : 'rgba(255,255,255,0.02)',
+        transform:  isHovered ? 'scale(1.08)'                     : 'scale(1)',
+        transition: 'all 0.25s cubic-bezier(0.34,1.56,0.64,1)',
+      }}
     >
-      <Icon size={10} strokeWidth={1.6} color={TM} />
+      <Icon
+        size={10} strokeWidth={1.6}
+        color={isHovered ? TEAL : TM}
+        style={{ transition: 'color 0.25s ease' }}
+      />
     </Flex>
   )
 }
 
 // ── Main Sidebar ───────────────────────────────────────────────────────────────
 export function Sidebar() {
-  const location = useLocation()
+  const location    = useLocation()
   const { t, i18n } = useTranslation()
   const currentLang = i18n.language.split("-")[0]
-  const activeIdx = WIZARD_STEPS.findIndex((s) => s.path === location.pathname)
+  const activeIdx   = WIZARD_STEPS.findIndex((s) => s.path === location.pathname)
+
+  const stepRefs     = useRef<(HTMLDivElement | null)[]>([])
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [pillStyle, setPillStyle]   = useState({ top: 0, height: 32, opacity: 0 })
+  const [pillReady, setPillReady]   = useState(false)   // enables spring after first paint
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
+
+  // ── Calculate sliding-pill position ────────────────────────────────────────
+  useEffect(() => {
+    if (activeIdx < 0 || !stepRefs.current[activeIdx] || !containerRef.current) {
+      setPillStyle(prev => ({ ...prev, opacity: 0 }))
+      return
+    }
+    const el = stepRefs.current[activeIdx]!
+    setPillStyle({ top: el.offsetTop, height: el.offsetHeight, opacity: 1 })
+  }, [activeIdx, location.pathname])
+
+  // ── Enable spring transition after first paint ──────────────────────────────
+  useEffect(() => {
+    const raf = requestAnimationFrame(() =>
+      requestAnimationFrame(() => setPillReady(true))
+    )
+    return () => cancelAnimationFrame(raf)
+  }, [])
 
   const handleLangChange = (lang: string) => {
     i18n.changeLanguage(lang)
     localStorage.setItem("freakyocs-lang", lang)
   }
+
+  const pillTransition = pillReady
+    ? 'top 0.5s cubic-bezier(0.34,1.56,0.64,1), height 0.35s cubic-bezier(0.34,1.56,0.64,1), opacity 0.35s ease'
+    : 'opacity 0.35s ease'
 
   return (
     <Box
@@ -131,40 +158,61 @@ export function Sidebar() {
       flexDirection="column"
       zIndex={10}
     >
-      {/* ── Brand ──────────────────────────────────────────────────────── */}
-      <Box px={5} pt={5} pb={4}>
-        <Flex align="center" gap="10px">
-          <LogoMark />
-          <Box>
-            <Text
-              fontSize="13px" fontWeight="700"
-              letterSpacing="-0.02em" lineHeight={1.2}
-              color={T}
-            >
-              freaky<Text as="span" color={TEAL}>OCS</Text>
-            </Text>
-            <Text
-              fontSize="9px" color={TM} fontWeight="500"
-              letterSpacing="0.1em" textTransform="uppercase" mt="1px"
-            >
-              OpenCore Builder
-            </Text>
-          </Box>
-        </Flex>
-      </Box>
-
-      <Box h="1px" bg="rgba(255,255,255,0.04)" mx={5} />
-
       {/* ── Timeline Navigation ─────────────────────────────────────────── */}
-      <Box flex={1} py={3} px={4} overflowY="auto" position="relative">
+      <Box
+        flex={1} py={3} px={4}
+        overflowY="auto"
+        position="relative"
+        ref={containerRef as RefObject<HTMLDivElement>}
+      >
+        {/* ── Magnetic sliding pill ──────────────────────────────────── */}
+        <Box
+          position="absolute"
+          left="16px" right="16px"
+          borderRadius="8px"
+          pointerEvents="none"
+          zIndex={1}
+          overflow="hidden"
+          style={{
+            top:        `${pillStyle.top}px`,
+            height:     `${pillStyle.height}px`,
+            opacity:    pillStyle.opacity,
+            background: 'linear-gradient(90deg, rgba(45,212,191,0.1) 0%, rgba(45,212,191,0.04) 100%)',
+            border:     '1px solid rgba(45,212,191,0.22)',
+            boxShadow:  '0 0 24px rgba(45,212,191,0.07), inset 0 1px 0 rgba(45,212,191,0.1)',
+            transition: pillTransition,
+          }}
+        >
+          {/* Left accent bar */}
+          <Box
+            position="absolute"
+            left={0} top="15%" bottom="15%"
+            w="2px" borderRadius="full"
+            style={{
+              background: `linear-gradient(180deg, transparent, ${TEAL}, transparent)`,
+              boxShadow:  `0 0 6px ${TEAL}`,
+            }}
+          />
+          {/* Shimmer sweep */}
+          <div className="pill-shimmer" />
+        </Box>
+
         {WIZARD_STEPS.map((step, index) => {
-          const isActive = location.pathname === step.path
-          const isPast   = index < activeIdx && activeIdx !== -1
-          const Icon     = stepIcons[step.id] ?? Home
+          const isActive  = location.pathname === step.path
+          const isPast    = index < activeIdx && activeIdx !== -1
+          const Icon      = stepIcons[step.id] ?? Home
+          const isHovered = hoveredIdx === index
 
           return (
-            <Box key={step.id} position="relative">
-
+            <Box
+              key={step.id}
+              position="relative"
+              ref={(el: HTMLDivElement | null) => { stepRefs.current[index] = el }}
+              style={{
+                animation:      'sidebar-item-in 0.5s cubic-bezier(0.16,1,0.3,1) both',
+                animationDelay: `${index * 38}ms`,
+              }}
+            >
               {/* Step row */}
               <Link
                 to={step.path}
@@ -177,18 +225,19 @@ export function Sidebar() {
                   borderRadius="8px"
                   cursor="pointer"
                   position="relative"
-                  bg={isActive ? "rgba(45,212,191,0.06)" : "transparent"}
-                  transition="all 0.2s ease"
-                  _hover={{
-                    bg: isActive
-                      ? "rgba(45,212,191,0.09)"
-                      : "rgba(255,255,255,0.03)",
+                  zIndex={2}
+                  onMouseEnter={() => setHoveredIdx(index)}
+                  onMouseLeave={() => setHoveredIdx(null)}
+                  style={{
+                    transform:  isHovered && !isActive ? 'translateX(3px)' : 'none',
+                    transition: 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)',
                   }}
                 >
                   <StepNode
                     isActive={isActive}
                     isPast={isPast}
                     Icon={Icon}
+                    isHovered={isHovered}
                   />
 
                   <Box flex={1} minW={0}>
@@ -196,8 +245,9 @@ export function Sidebar() {
                       fontSize="12px"
                       fontWeight={isActive ? "600" : "400"}
                       color={
-                        isActive ? T
-                        : isPast  ? `rgba(45,212,191,0.7)`
+                        isActive   ? T
+                        : isPast   ? 'rgba(45,212,191,0.7)'
+                        : isHovered ? TS
                         : TM
                       }
                       transition="color 0.2s"
@@ -209,25 +259,31 @@ export function Sidebar() {
                     {isActive && (
                       <Text
                         fontSize="9px"
-                        color={`rgba(45,212,191,0.5)`}
+                        color="rgba(45,212,191,0.5)"
                         fontWeight="500"
                         mt="2px"
                         letterSpacing="0.03em"
+                        style={{ animation: 'fade-in 0.35s ease both' }}
                       >
                         {t('sidebar.currentStep')}
                       </Text>
                     )}
                   </Box>
 
-                  {/* Active indicator dot on right */}
-                  {isActive && (
-                    <Box
-                      w="5px" h="5px" borderRadius="full"
-                      bg={TEAL}
-                      flexShrink={0}
-                      boxShadow={`0 0 6px ${TEAL}`}
-                    />
-                  )}
+                  {/* Active glow dot */}
+                  <Box
+                    w="5px" h="5px" borderRadius="full"
+                    flexShrink={0}
+                    style={{
+                      background: TEAL,
+                      opacity:    isActive ? 1 : 0,
+                      transform:  isActive ? 'scale(1)' : 'scale(0)',
+                      transition: 'opacity 0.3s ease, transform 0.4s cubic-bezier(0.34,1.56,0.64,1)',
+                      boxShadow:  isActive
+                        ? `0 0 8px ${TEAL}, 0 0 18px rgba(45,212,191,0.4)`
+                        : 'none',
+                    }}
+                  />
                 </Flex>
               </Link>
             </Box>

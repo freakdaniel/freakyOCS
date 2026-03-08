@@ -15,12 +15,29 @@ public sealed partial class UsbMapperService
 
         try
         {
-            // Get USB controllers from IORegistry
-            var ioregOutput = await RunIoregAsync("-lx -c IOUSBHostDevice", ct);
-            if (!string.IsNullOrEmpty(ioregOutput))
+            // Query XHCI controllers first (includes all ports, even empty ones)
+            var xhciOutput = await RunIoregAsync("-l -c AppleUSBXHCI", ct);
+            if (!string.IsNullOrEmpty(xhciOutput))
+                controllers.AddRange(ParseIoregOutput(xhciOutput));
+
+            // Fallback: query generic USB host controllers if no XHCI found
+            if (controllers.Count == 0)
             {
-                controllers = ParseIoregOutput(ioregOutput);
+                var fallbackOutput = await RunIoregAsync("-l -c IOUSBHostController", ct);
+                if (!string.IsNullOrEmpty(fallbackOutput))
+                    controllers.AddRange(ParseIoregOutput(fallbackOutput));
             }
+
+            // Enrich with device information for occupied ports
+            var deviceOutput = await RunIoregAsync("-l -c IOUSBHostDevice", ct);
+            if (!string.IsNullOrEmpty(deviceOutput))
+                EnrichWithConnectedDevices(controllers, deviceOutput);
+
+            // Auto-select ports that have connected devices
+            foreach (var ctrl in controllers)
+                foreach (var port in ctrl.Ports)
+                    if (port.Devices.Count > 0)
+                        port.Selected = true;
         }
         catch (Exception ex)
         {
@@ -28,6 +45,42 @@ public sealed partial class UsbMapperService
         }
 
         return controllers;
+    }
+
+    private void EnrichWithConnectedDevices(List<UsbController> controllers, string deviceOutput)
+    {
+        // Parse device output and match devices to ports by port number
+        var devices = ParseConnectedDevices(deviceOutput);
+        foreach (var ctrl in controllers)
+            foreach (var port in ctrl.Ports)
+                foreach (var dev in devices)
+                    if (dev.PortNum == port.Index && !port.Devices.Any(d => d.Name == dev.Name))
+                        port.Devices.Add(new UsbDevice { Name = dev.Name });
+    }
+
+    private static List<(int PortNum, string Name)> ParseConnectedDevices(string output)
+    {
+        var result    = new List<(int, string)>();
+        var portRegex = new Regex(@"""port""\s*=\s*<([0-9a-fA-F]+)>", RegexOptions.IgnoreCase);
+        var nameRegex = new Regex(@"""USB Product Name""\s*=\s*""([^""]+)""", RegexOptions.IgnoreCase);
+
+        var portNum  = 0;
+        var lastName = "";
+        foreach (var line in output.Split('\n'))
+        {
+            var pm = portRegex.Match(line);
+            if (pm.Success && int.TryParse(pm.Groups[1].Value, System.Globalization.NumberStyles.HexNumber, null, out var p))
+                portNum = p;
+
+            var nm = nameRegex.Match(line);
+            if (nm.Success && portNum > 0)
+            {
+                lastName = nm.Groups[1].Value;
+                result.Add((portNum, lastName));
+                portNum = 0;
+            }
+        }
+        return result;
     }
 
     private async Task<string?> RunIoregAsync(string arguments, CancellationToken ct)

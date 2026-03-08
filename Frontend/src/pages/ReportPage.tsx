@@ -83,17 +83,6 @@ export function ReportPage() {
         <Text color={TS} fontSize="13px">{t('report.subtitle')}</Text>
       </Box>
 
-      {/* ── Error ──────────────────────────────────────────────────────── */}
-      {error && (
-        <HStack
-          gap={3} px={4} py={3} mb={4} borderRadius="10px"
-          bg="rgba(239,68,68,0.06)" border="1px solid rgba(239,68,68,0.16)"
-        >
-          <AlertTriangle size={15} color="#EF4444" />
-          <Text color="#EF4444" fontSize="13px">{error}</Text>
-        </HStack>
-      )}
-
       {/* ── Detection options ───────────────────────────────────────────── */}
       <Flex gap={4} mb={5} direction={{ base: 'column', md: 'row' }}>
 
@@ -160,7 +149,17 @@ export function ReportPage() {
         </Box>
       </Flex>
 
-      {/* ── Saved path notice ───────────────────────────────────────────── */}
+      {/* ── Notifications (error / saved path) ───────────────────────── */}
+      {error && (
+        <HStack
+          gap={3} px={4} py={3} mb={4} borderRadius="10px"
+          bg="rgba(239,68,68,0.06)" border="1px solid rgba(239,68,68,0.16)"
+          animation="fadeIn 0.3s ease-out"
+        >
+          <AlertTriangle size={15} color="#EF4444" />
+          <Text color="#EF4444" fontSize="13px">{error}</Text>
+        </HStack>
+      )}
       {savedPath && (
         <HStack
           gap={3} px={4} py={3} mb={4} borderRadius="10px"

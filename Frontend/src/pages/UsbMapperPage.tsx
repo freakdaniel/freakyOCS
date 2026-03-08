@@ -8,8 +8,17 @@ import type { UsbController, UsbPort } from '../types'
 import { USB_CONNECTOR_TYPES } from '../types'
 import {
   RefreshCw, ChevronLeft, ChevronRight, Check,
-  AlertTriangle, Zap, Info, MousePointer2,
+  AlertTriangle, Zap, Info,
 } from 'lucide-react'
+
+/** Strip "@driver.inf,%key%;" INF-style prefixes Windows puts in registry device names. */
+const cleanDeviceName = (name: string) => {
+  if (name.startsWith('@')) {
+    const idx = name.indexOf(';')
+    if (idx >= 0) return name.slice(idx + 1).trim()
+  }
+  return name
+}
 
 const BG   = '#0A0A0A'
 const S    = '#111111'
@@ -40,8 +49,7 @@ export function UsbMapperPage() {
   const { t } = useTranslation()
   const { state, dispatch } = useApp()
   const invoke = usePhotinoInvoke()
-  const [isScanning, setIsScanning]   = useState(false)
-  const [autoRefresh, setAutoRefresh] = useState(false)
+  const [isScanning, setIsScanning] = useState(false)
 
   usePhotinoEvent<UsbController[]>('usb:controllers', (data) => {
     setIsScanning(false)
@@ -54,7 +62,7 @@ export function UsbMapperPage() {
 
   const startScan = useCallback(() => {
     setIsScanning(true)
-    invoke('usb:scan')
+    invoke('usb:scan').catch(() => setIsScanning(false))
   }, [invoke])
 
   useEffect(() => {
@@ -95,19 +103,9 @@ export function UsbMapperPage() {
     [state.usbControllers, dispatch, invoke]
   )
 
-  const selectAllPopulated = useCallback(() => {
-    state.usbControllers.forEach((controller, ci) => {
-      const updatedPorts = controller.ports.map((p) => ({ ...p, selected: p.devices.length > 0 }))
-      dispatch({
-        type: 'UPDATE_USB_CONTROLLER',
-        index: ci,
-        controller: { ...controller, ports: updatedPorts, selectedCount: updatedPorts.filter((p) => p.selected).length },
-      })
-    })
-  }, [state.usbControllers, dispatch])
-
-  const totalSelected = state.usbControllers.reduce((acc, c) => acc + c.ports.filter((p) => p.selected).length, 0)
-  const totalPorts    = state.usbControllers.reduce((acc, c) => acc + c.ports.length, 0)
+  const totalSelected       = state.usbControllers.reduce((acc, c) => acc + c.ports.filter((p) => p.selected).length, 0)
+  const totalPorts          = state.usbControllers.reduce((acc, c) => acc + c.ports.length, 0)
+  const anyControllerOver15 = state.usbControllers.some((c) => c.ports.filter((p) => p.selected).length > 15)
 
   return (
     <Flex direction="column" h="100vh" bg={BG} px={7} py={6} gap={0}>
@@ -123,13 +121,13 @@ export function UsbMapperPage() {
         <HStack gap={2}>
           <Box
             px={3} py="5px" borderRadius="7px" fontSize="12px" fontWeight="700"
-            bg={totalSelected > 15 ? 'rgba(239,68,68,0.08)' : 'rgba(45,212,191,0.08)'}
-            border={`1px solid ${totalSelected > 15 ? 'rgba(239,68,68,0.2)' : 'rgba(45,212,191,0.2)'}`}
-            color={totalSelected > 15 ? '#EF4444' : TEAL}
+            bg={anyControllerOver15 ? 'rgba(239,68,68,0.08)' : 'rgba(45,212,191,0.08)'}
+            border={`1px solid ${anyControllerOver15 ? 'rgba(239,68,68,0.2)' : 'rgba(45,212,191,0.2)'}`}
+            color={anyControllerOver15 ? '#EF4444' : TEAL}
           >
             {totalSelected}/{totalPorts} {t('usb.portsLabel')}
           </Box>
-          {totalSelected > 15 && (
+          {anyControllerOver15 && (
             <HStack gap={1} px={2} py="5px" borderRadius="6px" bg="rgba(239,68,68,0.08)">
               <AlertTriangle size={11} color="#EF4444" />
               <Text fontSize="11px" color="#EF4444" fontWeight="600">{t('usb.maxWarning')}</Text>
@@ -139,38 +137,16 @@ export function UsbMapperPage() {
       </Flex>
 
       {/* ── Controls ───────────────────────────────────────────────────── */}
-      <Flex gap={3} mb={3} align="center" justify="space-between">
-        <HStack gap={2}>
-          <Box
-            as="button" px={3} py="6px" borderRadius="8px"
-            bg="rgba(255,255,255,0.04)" color={TS} fontSize="12px" fontWeight="500"
-            _hover={{ bg: 'rgba(255,255,255,0.07)', color: T }}
-            onClick={startScan} opacity={isScanning ? 0.6 : 1}
-            display="flex" alignItems="center" gap={2} transition="all 0.15s"
-          >
-            <RefreshCw size={12} className={isScanning ? 'spin' : ''} /> {t('usb.refresh')}
-          </Box>
-          <Box
-            as="button" px={3} py="6px" borderRadius="8px"
-            bg="rgba(255,255,255,0.04)" color={TS} fontSize="12px" fontWeight="500"
-            _hover={{ bg: 'rgba(255,255,255,0.07)', color: T }}
-            onClick={selectAllPopulated} display="flex" alignItems="center" gap={2}
-            transition="all 0.15s"
-          >
-            <MousePointer2 size={12} /> {t('usb.selectPopulated')}
-          </Box>
-        </HStack>
+      <Flex gap={3} mb={3} align="center">
         <Box
-          as="button" px={3} py="6px" borderRadius="7px"
-          bg={autoRefresh ? 'rgba(45,212,191,0.08)' : 'rgba(255,255,255,0.03)'}
-          border={`1px solid ${autoRefresh ? 'rgba(45,212,191,0.2)' : B}`}
-          color={autoRefresh ? TEAL : TS}
-          fontSize="11px" fontWeight="600"
-          onClick={() => setAutoRefresh(!autoRefresh)}
-          display="flex" alignItems="center" gap={1.5}
-          transition="all 0.15s"
+          as="button" px={3} py="6px" borderRadius="8px"
+          bg="rgba(255,255,255,0.04)" color={TS} fontSize="12px" fontWeight="500"
+          _hover={{ bg: 'rgba(255,255,255,0.07)', color: T }}
+          onClick={startScan} opacity={isScanning ? 0.6 : 1}
+          pointerEvents={isScanning ? 'none' : 'auto'}
+          display="flex" alignItems="center" gap={2} transition="all 0.15s"
         >
-          <Zap size={11} /> {t('usb.autoRefresh')}
+          <RefreshCw size={12} className={isScanning ? 'spin' : ''} /> {t('usb.refresh')}
         </Box>
       </Flex>
 
@@ -307,7 +283,7 @@ function PortRow({
             port.devices.map((device, i) => (
               <HStack key={i} gap={1}>
                 <Zap size={9} color="#22C55E" />
-                <Text fontSize="11px" color={T} fontWeight="500" truncate>{device.name}</Text>
+                <Text fontSize="11px" color={T} fontWeight="500" truncate>{cleanDeviceName(device.name)}</Text>
               </HStack>
             ))
           ) : (

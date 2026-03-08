@@ -277,8 +277,9 @@ public static class HandlersSetup
         router.Register("usb:toggle-port", (payload, window, requestId) =>
         {
             var usb = sp.GetRequiredService<UsbMapperService>();
-            var idx = payload?.TryGetProperty("selectionIndex", out var i) == true ? i.GetInt32() : -1;
-            if (idx >= 0) usb.TogglePort(idx);
+            var ci  = payload?.TryGetProperty("controller", out var c) == true ? c.GetInt32() : -1;
+            var pi  = payload?.TryGetProperty("port",       out var p) == true ? p.GetInt32() : -1;
+            if (ci >= 0 && pi >= 0) usb.TogglePortAt(ci, pi);
             window.Send(AppResponse.Ok("usb:updated", MapControllers(usb.ControllersHistorical ?? []), requestId));
             return Task.CompletedTask;
         });
@@ -286,23 +287,119 @@ public static class HandlersSetup
         router.Register("usb:set-type", (payload, window, requestId) =>
         {
             var usb = sp.GetRequiredService<UsbMapperService>();
-            var idx = payload?.TryGetProperty("selectionIndex", out var i) == true ? i.GetInt32() : -1;
-            var ct = payload?.TryGetProperty("connectorType", out var c) == true ? c.GetInt32() : 0;
-            if (idx >= 0) usb.SetPortType(idx, (UsbConnectorType)ct);
+            var ci  = payload?.TryGetProperty("controller", out var c) == true ? c.GetInt32() : -1;
+            var pi  = payload?.TryGetProperty("port",       out var p) == true ? p.GetInt32() : -1;
+            var ct  = payload?.TryGetProperty("type",       out var t) == true ? t.GetInt32() : 0;
+            if (ci >= 0 && pi >= 0) usb.SetPortTypeAt(ci, pi, (UsbConnectorType)ct);
             window.Send(AppResponse.Ok("usb:updated", MapControllers(usb.ControllersHistorical ?? []), requestId));
             return Task.CompletedTask;
         });
 
-        // ── Build (stub) ──────────────────────────────────────────────────────────
+        // ── Build ─────────────────────────────────────────────────────────────────
 
-        router.Register("build:start", (_, window, requestId) =>
+        CancellationTokenSource? buildCts = null;
+        var buildCtsLock = new object();
+
+        router.Register("build:start", async (payload, window, requestId) =>
         {
-            window.Send(AppResponse.Fail("build:error", "Build is not yet implemented", requestId));
-            return Task.CompletedTask;
+            // Acknowledge immediately so the frontend invoke() resolves before the build completes
+            window.Send(AppResponse.Ok("build:started", null, requestId));
+
+            // Cancel any already-running build and create a fresh CTS
+            CancellationTokenSource cts;
+            lock (buildCtsLock)
+            {
+                buildCts?.Cancel();
+                buildCts = cts = new CancellationTokenSource();
+            }
+
+            var build  = sp.GetRequiredService<BuildService>();
+            var report = RebuildReport(payload);
+
+            // SMBIOS
+            SmbiosData? smbios = null;
+            if (payload?.TryGetProperty("smbios", out var smEl) == true)
+                smbios = new SmbiosData(
+                    MLB:                Get(smEl, "mlb"),
+                    ROM:                Get(smEl, "rom"),
+                    SystemProductName:  Get(smEl, "model"),
+                    SystemSerialNumber: Get(smEl, "serial"),
+                    SystemUUID:         Get(smEl, "uuid"));
+
+            if (smbios is null)
+            {
+                window.Send(AppResponse.Fail("build:error", "SMBIOS not configured", null));
+                return;
+            }
+
+            var macosVersion = GetMacosVersion(payload) ?? OsData.GetLatestDarwinVersion();
+
+            // Enabled kext names
+            var kextNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (payload?.TryGetProperty("kexts", out var kextsEl) == true)
+                foreach (var k in kextsEl.EnumerateArray())
+                    if (k.TryGetProperty("enabled", out var en) && en.GetBoolean())
+                    {
+                        var n = Get(k, "name");
+                        if (!string.IsNullOrEmpty(n)) kextNames.Add(n);
+                    }
+
+            // Enabled ACPI patch IDs
+            var acpiPatchIds = new List<string>();
+            if (payload?.TryGetProperty("acpiPatches", out var patchesEl) == true)
+                foreach (var p in patchesEl.EnumerateArray())
+                    if (p.TryGetProperty("enabled", out var en) && en.GetBoolean())
+                    {
+                        var id = Get(p, "id");
+                        if (!string.IsNullOrEmpty(id)) acpiPatchIds.Add(id);
+                    }
+
+            // USB controllers — use the stored service state (the user already configured this)
+            var usbSvc = sp.GetRequiredService<UsbMapperService>();
+            var usbControllers = usbSvc.ControllersHistorical ?? [];
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var outputPath = await build.BuildAsync(
+                        report, smbios, macosVersion, kextNames, acpiPatchIds, usbControllers,
+                        sendProgress: (stage, pct, msg) =>
+                            window.Send(AppResponse.Ok("build:progress", new
+                            {
+                                stage,
+                                progress = pct,
+                                message  = msg,
+                                log      = Array.Empty<string>(),
+                            }, null)),
+                        cts.Token);
+
+                    window.Send(AppResponse.Ok("build:complete", new
+                    {
+                        success      = true,
+                        outputPath,
+                        biosSettings = Array.Empty<object>(),
+                        nextSteps    = Array.Empty<string>(),
+                    }, null));
+                }
+                catch (OperationCanceledException)
+                {
+                    window.Send(AppResponse.Fail("build:error", "Build was cancelled", null));
+                }
+                catch (Exception ex)
+                {
+                    window.Send(AppResponse.Fail("build:error", ex.Message, null));
+                }
+            });
         });
 
         router.Register("build:cancel", (_, window, requestId) =>
         {
+            lock (buildCtsLock)
+            {
+                buildCts?.Cancel();
+                buildCts = null;
+            }
             window.Send(AppResponse.Ok("build:cancelled", null, requestId));
             return Task.CompletedTask;
         });

@@ -70,7 +70,7 @@
   "compatibility": {
     "title": "Совместимость",
     "subtitle": "Проверка совместимости оборудования с macOS.",
-    "supported": "Поддерживается",
+    "supported": "ОК",
     "limited": "Ограничена",
     "unsupported": "Не поддерживается",
     "unknown": "Неизвестно",

@@ -78,6 +78,7 @@ internal class Program
             builder.WebApp.Services.AddSingleton<DownloadService>();
             builder.WebApp.Services.AddSingleton<GitHubService>();
             builder.WebApp.Services.AddSingleton<HashService>();
+            builder.WebApp.Services.AddSingleton<BuildService>();
             builder.WebApp.Services.AddSingleton(p =>
             {
                 var dataDir = Path.Combine(
@@ -124,9 +125,9 @@ internal class Program
             Log.Information("Configuring InfiniFrame window...");
 
             builder.Window
-                .SetTitle("OpCore Simplify")
+                .SetTitle("freakyOCS")
                 .SetSize(new Size(1280, 800))
-                .SetMinSize(new Size(1024, 700))
+                .SetMinSize(new Size(1120, 700))
                 .Center()
                 .SetResizable(true)
                 .SetContextMenuEnabled(false)

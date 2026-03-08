@@ -101,10 +101,13 @@ public sealed partial class HardwareSnifferService
         var options = new JsonSerializerOptions
         {
             WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         };
 
-        var json = JsonSerializer.Serialize(report, options);
+        // Export the frontend DTO so the saved file can be re-imported via drag & drop
+        var dto = OcsNet.Core.Bridge.HardwareFrontendReport.From(report);
+        var json = JsonSerializer.Serialize(dto, options);
         await File.WriteAllTextAsync(outputPath, json, ct);
     }
 

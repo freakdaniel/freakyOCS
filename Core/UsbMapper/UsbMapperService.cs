@@ -105,6 +105,21 @@ public sealed partial class UsbMapperService
     }
 
     /// <summary>
+    /// Selects or deselects a port by controller/port array indices (from the frontend).
+    /// </summary>
+    public void TogglePortAt(int controllerIndex, int portIndex)
+    {
+        if (_controllersHistorical is null) return;
+        if (controllerIndex < 0 || controllerIndex >= _controllersHistorical.Count) return;
+
+        var ports = _controllersHistorical[controllerIndex].Ports;
+        if (portIndex < 0 || portIndex >= ports.Count) return;
+
+        var port = ports[portIndex];
+        port.Selected = !port.Selected;
+    }
+
+    /// <summary>
     /// Sets connector type for a port.
     /// </summary>
     public void SetPortType(int selectionIndex, UsbConnectorType connectorType)
@@ -124,6 +139,20 @@ public sealed partial class UsbMapperService
                 companion.ConnectorType = connectorType;
             }
         }
+    }
+
+    /// <summary>
+    /// Sets connector type by controller/port array indices (from the frontend).
+    /// </summary>
+    public void SetPortTypeAt(int controllerIndex, int portIndex, UsbConnectorType connectorType)
+    {
+        if (_controllersHistorical is null) return;
+        if (controllerIndex < 0 || controllerIndex >= _controllersHistorical.Count) return;
+
+        var ports = _controllersHistorical[controllerIndex].Ports;
+        if (portIndex < 0 || portIndex >= ports.Count) return;
+
+        ports[portIndex].ConnectorType = connectorType;
     }
 
     /// <summary>

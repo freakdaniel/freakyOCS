@@ -126,13 +126,13 @@ export function AcpiPatchesPage() {
                       <HStack gap={3}>
                         <Flex
                           w="18px" h="18px" borderRadius="5px" flexShrink={0}
-                          bg={patch.enabled ? (patch.required ? 'rgba(45,212,191,0.4)' : TEAL) : 'transparent'}
+                          bg={patch.enabled ? TEAL : 'transparent'}
                           border={patch.enabled ? 'none' : '1.5px solid rgba(255,255,255,0.1)'}
                           align="center" justify="center"
                           transition="all 0.15s"
-                          opacity={patch.required ? 0.5 : 1}
+                          opacity={patch.required && patch.enabled ? 0.65 : 1}
                         >
-                          {patch.enabled && <Check size={11} color={patch.required ? '#0A0A0A' : '#0A0A0A'} strokeWidth={3} />}
+                          {patch.enabled && <Check size={11} color="#0A0A0A" strokeWidth={3} />}
                         </Flex>
 
                         <Box flex={1} minW={0}>

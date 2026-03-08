@@ -55,19 +55,17 @@ public sealed class SmbiosService
         }
 
         return new SmbiosData(
-            MLB: mlb ?? $"A{"0"u8.ToArray().ToString()?.PadRight(15, '0')}Z" ?? "A000000000000000Z",
+            MLB: mlb ?? GenerateFallbackMlb(),
             ROM: randomMac,
             SystemProductName: smbiosModel,
-            SystemSerialNumber: serial ?? $"A{"0"u8.ToArray().ToString()?.PadRight(10, '0')}9" ?? "A00000000009",
+            SystemSerialNumber: serial ?? GenerateFallbackSerial(),
             SystemUUID: Guid.NewGuid().ToString().ToUpperInvariant()
         );
     }
 
     public string? FindMacserial()
     {
-        var scriptDir = AppContext.BaseDirectory;
         string[] candidates;
-
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             candidates = ["macserial.exe"];
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
@@ -75,15 +73,66 @@ public sealed class SmbiosService
         else
             candidates = ["macserial"];
 
+        foreach (var dir in GetBinarySearchPaths())
         foreach (var binary in candidates)
         {
-            var path = Path.Combine(scriptDir, binary);
+            var path = Path.Combine(dir, binary);
             if (File.Exists(path))
                 return path;
         }
 
         _logger?.LogWarning("macserial binary not found");
         return null;
+    }
+
+    /// <summary>
+    /// Returns candidate directories to search for bundled binaries (macserial, iasl…).
+    /// Searches the exe directory, cwd, and up to 4 parent levels of each — both the
+    /// root dir itself and its Scripts/ subdirectory.
+    /// </summary>
+    internal static IEnumerable<string> GetBinarySearchPaths()
+    {
+        var seen   = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var result = new List<string>();
+
+        void Enqueue(string? d)
+        {
+            if (!string.IsNullOrEmpty(d) && seen.Add(d))
+                result.Add(d);
+        }
+
+        foreach (var root in new[] { AppContext.BaseDirectory, Directory.GetCurrentDirectory() })
+        {
+            var dir = root;
+            for (int level = 0; level <= 4; level++)
+            {
+                Enqueue(dir);
+                Enqueue(Path.Combine(dir, "Scripts"));
+                var parent = Path.GetDirectoryName(dir);
+                if (parent is null || parent == dir) break;
+                dir = parent;
+            }
+        }
+
+        return result;
+    }
+
+    private static string GenerateFallbackSerial()
+    {
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        var buf = new char[12];
+        for (int i = 0; i < buf.Length; i++)
+            buf[i] = chars[Random.Shared.Next(chars.Length)];
+        return new string(buf);
+    }
+
+    private static string GenerateFallbackMlb()
+    {
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        var buf = new char[17];
+        for (int i = 0; i < buf.Length; i++)
+            buf[i] = chars[Random.Shared.Next(chars.Length)];
+        return new string(buf);
     }
 
     public string SelectSmbiosModel(HardwareReport report, string macosVersion)
