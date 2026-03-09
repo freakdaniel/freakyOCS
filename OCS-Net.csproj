@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>OcsNet</RootNamespace>
-    <AssemblyName>OpCore-Simplify</AssemblyName>
+    <AssemblyName>freakyOCS</AssemblyName>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
@@ -31,10 +31,59 @@
     </None>
   </ItemGroup>
 
-  <Target Name="BuildFrontend" BeforeTargets="Build" Condition="'$(SkipFrontendBuild)' != 'true'">
-    <Message Text="=== Building React frontend ===" Importance="high" />
-    <Exec Command="npm install" WorkingDirectory="$(ProjectDir)Frontend" />
-    <Exec Command="npm run build" WorkingDirectory="$(ProjectDir)Frontend" />
+  <!--
+    Frontend build targets.
+    Skip with: dotnet build -p:SkipFrontendBuild=true
+    Override node path: dotnet build -p:NodeBinPath=/custom/node/bin
+  -->
+
+  <PropertyGroup>
+    <FrontendDir>$(ProjectDir)Frontend</FrontendDir>
+  </PropertyGroup>
+
+  <!-- Windows: npm.cmd should be in PATH via Node installer -->
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <NpmExec>npm.cmd</NpmExec>
+    <NpmInstallCmd>$(NpmExec) ci --prefer-offline</NpmInstallCmd>
+    <NpmBuildCmd>$(NpmExec) run build</NpmBuildCmd>
+  </PropertyGroup>
+
+  <!--
+    Unix: MSBuild Exec runs the command via /bin/sh (dash on Debian/Ubuntu).
+    nvm.sh uses bash-specific syntax, so we call 'bash -c' explicitly.
+    sh expands $HOME inside "…" before handing the string to bash.
+    bash then sources nvm.sh properly and npm is available.
+    Override npm location: dotnet build -p:NpmCmd=/path/to/npm
+  -->
+
+  <!-- Unix – explicit npm binary path provided by the caller -->
+  <PropertyGroup Condition="!$([MSBuild]::IsOSPlatform('Windows')) and '$(NpmCmd)' != ''">
+    <NpmInstallCmd>$(NpmCmd) ci --prefer-offline</NpmInstallCmd>
+    <NpmBuildCmd>$(NpmCmd) run build</NpmBuildCmd>
+  </PropertyGroup>
+
+  <!-- Unix – auto-detect: source nvm/volta (bash), then run npm -->
+  <PropertyGroup Condition="!$([MSBuild]::IsOSPlatform('Windows')) and '$(NpmCmd)' == ''">
+    <NpmInstallCmd>bash -c "source $HOME/.nvm/nvm.sh 2>/dev/null; nvm use default 2>/dev/null; npm ci --prefer-offline"</NpmInstallCmd>
+    <NpmBuildCmd>bash -c "source $HOME/.nvm/nvm.sh 2>/dev/null; nvm use default 2>/dev/null; npm run build"</NpmBuildCmd>
+  </PropertyGroup>
+
+  <!-- npm ci: only when package-lock.json / package.json are newer than node_modules -->
+  <Target Name="FrontendInstall"
+          BeforeTargets="FrontendBuild"
+          Inputs="$(FrontendDir)/package-lock.json;$(FrontendDir)/package.json"
+          Outputs="$(FrontendDir)/node_modules/.package-lock.json"
+          Condition="'$(SkipFrontendBuild)' != 'true'">
+    <Message Text="[Frontend] Installing npm dependencies..." Importance="high" />
+    <Exec Command="$(NpmInstallCmd)" WorkingDirectory="$(FrontendDir)" />
+  </Target>
+
+  <!-- vite build: runs every time (vite itself is incremental via cache) -->
+  <Target Name="FrontendBuild"
+          BeforeTargets="Build"
+          Condition="'$(SkipFrontendBuild)' != 'true'">
+    <Message Text="[Frontend] Building React app..." Importance="high" />
+    <Exec Command="$(NpmBuildCmd)" WorkingDirectory="$(FrontendDir)" />
   </Target>
 
 </Project>

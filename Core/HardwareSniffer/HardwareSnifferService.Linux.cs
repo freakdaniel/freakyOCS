@@ -8,32 +8,34 @@ public sealed partial class HardwareSnifferService
 {
     private async Task CollectLinuxHardwareAsync(HardwareReport report, CancellationToken ct)
     {
-        // Collect CPU info
+        // CPU and Motherboard are read from the /proc and /sys filesystems (fast, < 10 ms).
         report.Cpu = await CollectLinuxCpuAsync(ct);
-
-        // Collect Motherboard info
         report.Motherboard = await CollectLinuxMotherboardAsync(ct);
 
-        // Collect GPU info
-        report.Gpus = await CollectLinuxGpusAsync(ct);
+        // All PCI / USB queries are run in parallel so the total collection time is
+        // bounded by the slowest single command (≤ 8 s per-command timeout) rather than
+        // the sum of all commands.  This avoids the 30 s bridge timeout that fires when
+        // the 9+ lspci + lsusb calls are executed sequentially.
+        var gpuTask       = CollectLinuxGpusAsync(ct);
+        var audioTask     = CollectLinuxAudioAsync(ct);
+        var networkTask   = CollectLinuxNetworkAsync(ct);
+        var storageTask   = CollectLinuxStorageAsync(ct);
+        var bluetoothTask = CollectLinuxBluetoothAsync(ct);
 
-        // Collect Audio info
-        report.Sound = await CollectLinuxAudioAsync(ct);
+        await Task.WhenAll(gpuTask, audioTask, networkTask, storageTask, bluetoothTask);
 
-        // Collect Network info
-        report.Network = await CollectLinuxNetworkAsync(ct);
-
-        // Collect Storage info
-        report.StorageControllers = await CollectLinuxStorageAsync(ct);
-
-        // Collect Bluetooth info
-        report.Bluetooth = await CollectLinuxBluetoothAsync(ct);
+        report.Gpus             = gpuTask.Result;
+        report.Sound            = audioTask.Result;
+        report.Network          = networkTask.Result;
+        report.StorageControllers = storageTask.Result;
+        report.Bluetooth        = bluetoothTask.Result;
     }
 
     private async Task<CpuInfo?> CollectLinuxCpuAsync(CancellationToken ct)
     {
         var cpuInfo = await File.ReadAllTextAsync("/proc/cpuinfo", ct);
         var cpu = new CpuInfo();
+        var featuresSet = false;
 
         foreach (var line in cpuInfo.Split('\n'))
         {
@@ -45,20 +47,30 @@ public sealed partial class HardwareSnifferService
 
             switch (key)
             {
+                case "processor":
+                    // Each "processor" entry is one logical CPU (thread)
+                    cpu.ThreadCount++;
+                    break;
                 case "model name":
-                    cpu.ProcessorName = value;
+                    if (cpu.ProcessorName.Length == 0)
+                        cpu.ProcessorName = value;
                     break;
                 case "vendor_id":
-                    cpu.Manufacturer = value;
+                    if (cpu.Manufacturer.Length == 0)
+                        cpu.Manufacturer = value;
                     break;
                 case "cpu cores":
-                    if (int.TryParse(value, out var cores))
+                    if (int.TryParse(value, out var cores) && cpu.CoreCount == 0)
                         cpu.CoreCount = cores;
                     break;
                 case "flags":
-                    if (value.Contains("sse4_2")) cpu.SimdFeatures.Add("SSE4.2");
-                    if (value.Contains("avx2")) cpu.SimdFeatures.Add("AVX2");
-                    if (value.Contains("avx512")) cpu.SimdFeatures.Add("AVX512");
+                    if (!featuresSet)
+                    {
+                        if (value.Contains("sse4_2")) cpu.SimdFeatures.Add("SSE4.2");
+                        if (value.Contains("avx2")) cpu.SimdFeatures.Add("AVX2");
+                        if (value.Contains("avx512")) cpu.SimdFeatures.Add("AVX512");
+                        featuresSet = true;
+                    }
                     break;
             }
         }
@@ -95,9 +107,11 @@ public sealed partial class HardwareSnifferService
     {
         var gpus = new Dictionary<string, GpuInfo>();
 
-        // Use lspci to find VGA/3D controllers
-        var output = await RunCommandAsync("lspci", "-nn -d ::0300", ct);
-        output += "\n" + await RunCommandAsync("lspci", "-nn -d ::0302", ct);
+        // VGA: 0300, 3D controller: 0302 — run both in parallel
+        var gpuT1 = RunCommandAsync("lspci", "-nn -d ::0300", ct);
+        var gpuT2 = RunCommandAsync("lspci", "-nn -d ::0302", ct);
+        await Task.WhenAll(gpuT1, gpuT2);
+        var output = gpuT1.Result + "\n" + gpuT2.Result;
 
         foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
         {
@@ -107,10 +121,7 @@ public sealed partial class HardwareSnifferService
             var vendorId = match.Groups[1].Value.ToUpperInvariant();
             var deviceId = match.Groups[2].Value.ToUpperInvariant();
             var fullDeviceId = $"{vendorId}-{deviceId}";
-
-            // Extract name from the line
-            var namePart = line.Split(':').Skip(2).FirstOrDefault()?.Trim() ?? "Unknown GPU";
-            var name = Regex.Replace(namePart, @"\[.*?\]", "").Trim();
+            var name = ExtractPciDeviceName(line);
 
             gpus[name] = new GpuInfo
             {
@@ -133,7 +144,6 @@ public sealed partial class HardwareSnifferService
     {
         var audio = new Dictionary<string, AudioInfo>();
 
-        // Use lspci to find audio devices
         var output = await RunCommandAsync("lspci", "-nn -d ::0403", ct);
 
         foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
@@ -144,9 +154,7 @@ public sealed partial class HardwareSnifferService
             var vendorId = match.Groups[1].Value.ToUpperInvariant();
             var deviceId = match.Groups[2].Value.ToUpperInvariant();
             var fullDeviceId = $"{vendorId}-{deviceId}";
-
-            var namePart = line.Split(':').Skip(2).FirstOrDefault()?.Trim() ?? "Unknown Audio";
-            var name = Regex.Replace(namePart, @"\[.*?\]", "").Trim();
+            var name = ExtractPciDeviceName(line);
 
             audio[name] = new AudioInfo
             {
@@ -162,27 +170,31 @@ public sealed partial class HardwareSnifferService
     {
         var network = new Dictionary<string, NetworkInfo>();
 
-        // WiFi: 0280, Ethernet: 0200
-        var output = await RunCommandAsync("lspci", "-nn -d ::0200", ct);
-        output += "\n" + await RunCommandAsync("lspci", "-nn -d ::0280", ct);
+        // Ethernet: 0200, WiFi: 0280 — run both in parallel
+        var ethT = RunCommandAsync("lspci", "-nn -d ::0200", ct);
+        var wifiT = RunCommandAsync("lspci", "-nn -d ::0280", ct);
+        await Task.WhenAll(ethT, wifiT);
+        var ethernetOut = ethT.Result;
+        var wifiOut = wifiT.Result;
 
-        foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        foreach (var (output, netType) in new[] { (ethernetOut, "Ethernet"), (wifiOut, "WiFi") })
         {
-            var match = LinuxPciIdRegex().Match(line);
-            if (!match.Success) continue;
-
-            var vendorId = match.Groups[1].Value.ToUpperInvariant();
-            var deviceId = match.Groups[2].Value.ToUpperInvariant();
-            var fullDeviceId = $"{vendorId}-{deviceId}";
-
-            var namePart = line.Split(':').Skip(2).FirstOrDefault()?.Trim() ?? "Unknown Network";
-            var name = Regex.Replace(namePart, @"\[.*?\]", "").Trim();
-
-            network[name] = new NetworkInfo
+            foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
             {
-                DeviceId = fullDeviceId,
-                BusType = "PCI"
-            };
+                var match = LinuxPciIdRegex().Match(line);
+                if (!match.Success) continue;
+
+                var vendorId = match.Groups[1].Value.ToUpperInvariant();
+                var deviceId = match.Groups[2].Value.ToUpperInvariant();
+                var fullDeviceId = $"{vendorId}-{deviceId}";
+                var name = ExtractPciDeviceName(line);
+
+                network[name] = new NetworkInfo
+                {
+                    DeviceId = fullDeviceId,
+                    BusType = netType   // "Ethernet" or "WiFi"
+                };
+            }
         }
 
         return network.Count > 0 ? network : null;
@@ -192,33 +204,56 @@ public sealed partial class HardwareSnifferService
     {
         var storage = new Dictionary<string, StorageInfo>();
 
-        // SATA: 0106, NVMe: 0108
-        var output = await RunCommandAsync("lspci", "-nn -d ::0106", ct);
-        output += "\n" + await RunCommandAsync("lspci", "-nn -d ::0108", ct);
+        // SATA: 0106, NVMe: 0108 — run both in parallel
+        var sataT = RunCommandAsync("lspci", "-nn -d ::0106", ct);
+        var nvmeT = RunCommandAsync("lspci", "-nn -d ::0108", ct);
+        await Task.WhenAll(sataT, nvmeT);
+        var sataOut = sataT.Result;
+        var nvmeOut = nvmeT.Result;
 
-        foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        foreach (var (output, busType) in new[] { (sataOut, "SATA"), (nvmeOut, "NVMe") })
         {
-            var match = LinuxPciIdRegex().Match(line);
-            if (!match.Success) continue;
-
-            var vendorId = match.Groups[1].Value.ToUpperInvariant();
-            var deviceId = match.Groups[2].Value.ToUpperInvariant();
-            var fullDeviceId = $"{vendorId}-{deviceId}";
-
-            var namePart = line.Split(':').Skip(2).FirstOrDefault()?.Trim() ?? "Unknown Storage";
-            var name = Regex.Replace(namePart, @"\[.*?\]", "").Trim();
-
-            var busType = line.Contains("NVMe") || line.Contains("0108") ? "NVMe" : "SATA";
-
-            storage[name] = new StorageInfo
+            foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
             {
-                DeviceId = fullDeviceId,
-                BusType = busType,
-                SubsystemId = ""
-            };
+                var match = LinuxPciIdRegex().Match(line);
+                if (!match.Success) continue;
+
+                var vendorId = match.Groups[1].Value.ToUpperInvariant();
+                var deviceId = match.Groups[2].Value.ToUpperInvariant();
+                var fullDeviceId = $"{vendorId}-{deviceId}";
+                var name = ExtractPciDeviceName(line);
+
+                storage[name] = new StorageInfo
+                {
+                    DeviceId = fullDeviceId,
+                    BusType = busType,
+                    SubsystemId = ""
+                };
+            }
         }
 
         return storage.Count > 0 ? storage : null;
+    }
+
+    /// <summary>
+    /// Extracts the human-readable device name from a lspci -nn output line.
+    /// lspci format: [DOMAIN:]BUS:SLOT.FUNC Class Name [CCCC]: Vendor Device Name [VVVV:DDDD] (rev XX)
+    /// </summary>
+    private static string ExtractPciDeviceName(string line)
+    {
+        // The "]: " that ends the class code bracket is the boundary between
+        // the PCI address+class and the vendor+device description.
+        var sep = line.IndexOf("]: ", StringComparison.Ordinal);
+        if (sep < 0) return "Unknown";
+
+        var namePart = line[(sep + 3)..];
+
+        // Strip trailing [vid:did] and optional (rev XX)
+        namePart = Regex.Replace(namePart,
+            @"\s*\[[0-9a-fA-F]{4}:[0-9a-fA-F]{4}\].*$",
+            "", RegexOptions.None);
+
+        return namePart.Trim();
     }
 
     private async Task<Dictionary<string, BluetoothInfo>?> CollectLinuxBluetoothAsync(CancellationToken ct)

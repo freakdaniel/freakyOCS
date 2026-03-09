@@ -36,7 +36,8 @@
   "report": {
     "title": "硬件报告", "subtitle": "扫描或导入系统硬件信息。",
     "autoDetect": "自动检测", "autoDetectDesc": "扫描系统并自动生成硬件报告。",
-    "loadFile": "加载报告", "loadFileDesc": "将现有硬件报告 JSON 文件拖放到此处。",
+    "loadFile": "加载报告", "loadFileDesc": "将硬件报告 JSON 文件拖放到此处，或使用浏览按钮。",
+    "browse": "浏览",
     "scanning": "正在扫描硬件...", "detectingHw": "正在检测硬件…",
     "rescan": "重新扫描", "savedTo": "报告已保存至:", "loadedBadge": "已加载",
     "dragDrop": "将报告文件拖放到此处", "orClick": "或点击浏览", "checkCompatibility": "检查兼容性"

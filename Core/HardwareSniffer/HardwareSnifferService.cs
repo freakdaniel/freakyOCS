@@ -146,10 +146,21 @@ public sealed partial class HardwareSnifferService
                 StandardOutputEncoding = System.Text.Encoding.UTF8,
             };
 
+            // Per-command timeout: lspci/lsusb should never take more than 8 s.
+            // Without this a hung process blocks the whole hardware detection
+            // and triggers the 30 s bridge timeout on the frontend.
+            using var cmdCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cmdCts.CancelAfter(TimeSpan.FromSeconds(8));
+
             process.Start();
-            var output = await process.StandardOutput.ReadToEndAsync(ct);
-            await process.WaitForExitAsync(ct);
+            var output = await process.StandardOutput.ReadToEndAsync(cmdCts.Token);
+            await process.WaitForExitAsync(cmdCts.Token);
             return output;
+        }
+        catch (OperationCanceledException)
+        {
+            _logger?.LogWarning("Command {Command} timed out", command);
+            return string.Empty;
         }
         catch (Exception ex)
         {

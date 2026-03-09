@@ -151,7 +151,10 @@ public static class GpuData
             if (devId.StartsWith("25")) return "Ampere";
             if (devId.StartsWith("26")) return "Ada Lovelace";
             if (devId.StartsWith("27")) return "Ada Lovelace";
-            if (devId.StartsWith("28")) return "Blackwell";
+            if (devId.StartsWith("28")) return "Ada Lovelace"; // AD107 (RTX 4060/4050 series)
+            if (devId.StartsWith("2B")) return "Blackwell";    // GB202/GB203 (RTX 5090/5080)
+            if (devId.StartsWith("2C")) return "Blackwell";    // GB205/GB206 (RTX 5070)
+            if (devId.StartsWith("2D")) return "Blackwell";    // GB207 (RTX 5060)
 
             return "Unknown NVIDIA";
         }

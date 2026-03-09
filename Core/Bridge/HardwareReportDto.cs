@@ -91,7 +91,9 @@ public sealed class HardwareFrontendReport
         return [.. network.Select(kvp =>
         {
             var (vendorId, deviceId) = SplitId(kvp.Value.DeviceId);
-            var type = kvp.Value.BusType == "USB" ? "Unknown" : "Ethernet";
+            var type = kvp.Value.BusType is "WiFi" or "Ethernet" or "USB"
+                ? kvp.Value.BusType
+                : "Ethernet";
             return new FeNetworkInfo(kvp.Key, type, vendorId, deviceId, null);
         })];
     }

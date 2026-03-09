@@ -233,6 +233,27 @@ public sealed class SmbiosService
 
             var c when c.Contains("Ice Lake") => "MacBookAir9,1",
 
+            // Tiger Lake (11th gen):
+            //   H/H35/HX: MacBookPro16,1 (last Intel-H MacBook Pro, 16", Coffee Lake H – best match)
+            //   U/UP3/UP4/Y: MacBookAir9,1 (Ice Lake thin-and-light – closest spec for U-class)
+            var c when c.Contains("Tiger Lake") => platform == "Laptop"
+                ? (c.Contains("-H") || c.Contains("-B") ? "MacBookPro16,1" : "MacBookAir9,1")
+                : "iMac20,1",
+
+            // Alder Lake (12th gen):
+            //   H/HX: MacBookPro16,1  |  P/U: MacBookAir9,1
+            //   Desktop: iMac20,1 (last iMac before Apple Silicon)
+            var c when c.Contains("Alder Lake") => platform == "Laptop"
+                ? (c.Contains("-H") ? "MacBookPro16,1" : "MacBookAir9,1")
+                : "iMac20,1",
+
+            // Raptor Lake (13th gen – same SMBIOS strategy as Alder Lake):
+            //   H/HX: MacBookPro16,1  |  P/U: MacBookAir9,1
+            //   Desktop: iMac20,1
+            var c when c.Contains("Raptor Lake") => platform == "Laptop"
+                ? (c.Contains("-H") ? "MacBookPro16,1" : "MacBookAir9,1")
+                : "iMac20,1",
+
             _ => null
         };
     }

@@ -26,7 +26,8 @@
   "report": {
     "title": "Informe de hardware", "subtitle": "Escanear o importar información de hardware del sistema.",
     "autoDetect": "Detección automática", "autoDetectDesc": "Escanea tu sistema y genera un informe de hardware automáticamente.",
-    "loadFile": "Cargar informe", "loadFileDesc": "Arrastra y suelta un archivo JSON de informe de hardware aquí.",
+    "loadFile": "Cargar informe", "loadFileDesc": "Arrastra y suelta un archivo JSON de informe aquí o usa Examinar.",
+    "browse": "Examinar",
     "scanning": "Escaneando hardware...", "detectingHw": "Detectando hardware…",
     "rescan": "Re-escanear", "savedTo": "Informe guardado en:", "loadedBadge": "Cargado",
     "dragDrop": "Arrastra y suelta un archivo de informe aquí", "orClick": "o haz clic para examinar",

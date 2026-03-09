@@ -23,7 +23,7 @@ public static class HandlersSetup
             var sniffer = sp.GetRequiredService<HardwareSnifferService>();
             var report = await sniffer.CollectHardwareAsync();
             Log.Information("hardware:detect — done");
-            window.Send(AppResponse.Ok("hardware:detected", HardwareFrontendReport.From(report), requestId));
+            await window.SendAsync(AppResponse.Ok("hardware:detected", HardwareFrontendReport.From(report), requestId));
 
             // Save report JSON to app data folder (%LOCALAPPDATA%/freakyOCS/reports/)
             try
@@ -36,7 +36,7 @@ public static class HandlersSetup
                 var reportPath = Path.Combine(reportsDir, $"report-{timestamp}.json");
                 await sniffer.ExportReportAsync(report, reportPath);
                 Log.Information("hardware:detect — report saved to {Path}", reportPath);
-                window.Send(AppResponse.Ok("hardware:report-saved", reportPath, requestId));
+                await window.SendAsync(AppResponse.Ok("hardware:report-saved", reportPath, requestId));
             }
             catch (Exception ex)
             {
@@ -49,22 +49,22 @@ public static class HandlersSetup
             var path = payload?.TryGetProperty("path", out var p) == true ? p.GetString() : null;
             if (string.IsNullOrEmpty(path) || !File.Exists(path))
             {
-                window.Send(AppResponse.Fail("hardware:loaded", "File not found", requestId));
+                await window.SendAsync(AppResponse.Fail("hardware:loaded", "File not found", requestId));
                 return;
             }
             var sniffer = sp.GetRequiredService<HardwareSnifferService>();
             var report = await sniffer.ImportReportAsync(path);
             if (report is null)
             {
-                window.Send(AppResponse.Fail("hardware:loaded", "Failed to parse report", requestId));
+                await window.SendAsync(AppResponse.Fail("hardware:loaded", "Failed to parse report", requestId));
                 return;
             }
-            window.Send(AppResponse.Ok("hardware:loaded", HardwareFrontendReport.From(report), requestId));
+            await window.SendAsync(AppResponse.Ok("hardware:loaded", HardwareFrontendReport.From(report), requestId));
         });
 
         // ── Compatibility ─────────────────────────────────────────────────────────
 
-        router.Register("compatibility:check", (payload, window, requestId) =>
+        router.Register("compatibility:check", async (payload, window, requestId) =>
         {
             var compat = sp.GetRequiredService<CompatibilityService>();
             var report = RebuildReport(payload);
@@ -141,14 +141,14 @@ public static class HandlersSetup
             var overallStatus = blockers.Count > 0 ? "unsupported"
                 : warnings.Count > 0 ? "limited" : "supported";
 
-            window.Send(AppResponse.Ok("compatibility:result",
+            await window.SendAsync(AppResponse.Ok("compatibility:result",
                 new { devices, overallStatus, warnings, blockers }, requestId));
-            return Task.CompletedTask;
+
         });
 
         // ── macOS versions ────────────────────────────────────────────────────────
 
-        router.Register("macos:list", (payload, window, requestId) =>
+        router.Register("macos:list", async (payload, window, requestId) =>
         {
             var versions = OsData.MacosVersions.Select(v => new
             {
@@ -157,13 +157,13 @@ public static class HandlersSetup
                 darwin = $"{v.DarwinVersion}.0.0",
                 supported = true,
             }).ToArray();
-            window.Send(AppResponse.Ok("macos:versions", versions, requestId));
-            return Task.CompletedTask;
+            await window.SendAsync(AppResponse.Ok("macos:versions", versions, requestId));
+
         });
 
         // ── ACPI ──────────────────────────────────────────────────────────────────
 
-        router.Register("acpi:list", (payload, window, requestId) =>
+        router.Register("acpi:list", async (payload, window, requestId) =>
         {
             var report = RebuildReport(payload);
             var patches = AcpiPatchData.Patches.Select(p =>
@@ -180,13 +180,13 @@ public static class HandlersSetup
                     fileName = p.FunctionName,
                 };
             }).ToArray();
-            window.Send(AppResponse.Ok("acpi:patches", patches, requestId));
-            return Task.CompletedTask;
+            await window.SendAsync(AppResponse.Ok("acpi:patches", patches, requestId));
+
         });
 
         // ── Kexts ─────────────────────────────────────────────────────────────────
 
-        router.Register("kexts:list", (payload, window, requestId) =>
+        router.Register("kexts:list", async (payload, window, requestId) =>
         {
             var report = RebuildReport(payload);
             var macosVersion = GetMacosVersion(payload) ?? OsData.GetLatestDarwinVersion();
@@ -207,13 +207,13 @@ public static class HandlersSetup
                 minMacOS = k.MinDarwinVersion,
                 maxMacOS = k.MaxDarwinVersion,
             }).ToArray();
-            window.Send(AppResponse.Ok("kexts:list", kexts, requestId));
-            return Task.CompletedTask;
+            await window.SendAsync(AppResponse.Ok("kexts:list", kexts, requestId));
+
         });
 
         // ── SMBIOS ────────────────────────────────────────────────────────────────
 
-        router.Register("smbios:list", (payload, window, requestId) =>
+        router.Register("smbios:list", async (payload, window, requestId) =>
         {
             var report = RebuildReport(payload);
             var macosVersion = GetMacosVersion(payload) ?? OsData.GetLatestDarwinVersion();
@@ -246,8 +246,8 @@ public static class HandlersSetup
                     hidden,
                 };
             }).ToArray();
-            window.Send(AppResponse.Ok("smbios:models", models, requestId));
-            return Task.CompletedTask;
+            await window.SendAsync(AppResponse.Ok("smbios:models", models, requestId));
+
         });
 
         router.Register("smbios:generate", async (payload, window, requestId) =>
@@ -255,7 +255,7 @@ public static class HandlersSetup
             var model = payload?.TryGetProperty("model", out var mp) == true
                 ? mp.GetString() ?? "iMacPro1,1" : "iMacPro1,1";
             var data = await sp.GetRequiredService<SmbiosService>().GenerateSmbiosAsync(model);
-            window.Send(AppResponse.Ok("smbios:generated", new
+            await window.SendAsync(AppResponse.Ok("smbios:generated", new
             {
                 model = data.SystemProductName,
                 serial = data.SystemSerialNumber,
@@ -271,28 +271,28 @@ public static class HandlersSetup
         {
             var usb = sp.GetRequiredService<UsbMapperService>();
             var controllers = await usb.GetControllersAsync();
-            window.Send(AppResponse.Ok("usb:controllers", MapControllers(controllers), requestId));
+            await window.SendAsync(AppResponse.Ok("usb:controllers", MapControllers(controllers), requestId));
         });
 
-        router.Register("usb:toggle-port", (payload, window, requestId) =>
+        router.Register("usb:toggle-port", async (payload, window, requestId) =>
         {
             var usb = sp.GetRequiredService<UsbMapperService>();
             var ci  = payload?.TryGetProperty("controller", out var c) == true ? c.GetInt32() : -1;
             var pi  = payload?.TryGetProperty("port",       out var p) == true ? p.GetInt32() : -1;
             if (ci >= 0 && pi >= 0) usb.TogglePortAt(ci, pi);
-            window.Send(AppResponse.Ok("usb:updated", MapControllers(usb.ControllersHistorical ?? []), requestId));
-            return Task.CompletedTask;
+            await window.SendAsync(AppResponse.Ok("usb:updated", MapControllers(usb.ControllersHistorical ?? []), requestId));
+
         });
 
-        router.Register("usb:set-type", (payload, window, requestId) =>
+        router.Register("usb:set-type", async (payload, window, requestId) =>
         {
             var usb = sp.GetRequiredService<UsbMapperService>();
             var ci  = payload?.TryGetProperty("controller", out var c) == true ? c.GetInt32() : -1;
             var pi  = payload?.TryGetProperty("port",       out var p) == true ? p.GetInt32() : -1;
             var ct  = payload?.TryGetProperty("type",       out var t) == true ? t.GetInt32() : 0;
             if (ci >= 0 && pi >= 0) usb.SetPortTypeAt(ci, pi, (UsbConnectorType)ct);
-            window.Send(AppResponse.Ok("usb:updated", MapControllers(usb.ControllersHistorical ?? []), requestId));
-            return Task.CompletedTask;
+            await window.SendAsync(AppResponse.Ok("usb:updated", MapControllers(usb.ControllersHistorical ?? []), requestId));
+
         });
 
         // ── Build ─────────────────────────────────────────────────────────────────
@@ -303,7 +303,7 @@ public static class HandlersSetup
         router.Register("build:start", async (payload, window, requestId) =>
         {
             // Acknowledge immediately so the frontend invoke() resolves before the build completes
-            window.Send(AppResponse.Ok("build:started", null, requestId));
+            await window.SendAsync(AppResponse.Ok("build:started", null, requestId));
 
             // Cancel any already-running build and create a fresh CTS
             CancellationTokenSource cts;
@@ -328,7 +328,7 @@ public static class HandlersSetup
 
             if (smbios is null)
             {
-                window.Send(AppResponse.Fail("build:error", "SMBIOS not configured", null));
+                await window.SendAsync(AppResponse.Fail("build:error", "SMBIOS not configured", null));
                 return;
             }
 
@@ -364,8 +364,8 @@ public static class HandlersSetup
                 {
                     var outputPath = await build.BuildAsync(
                         report, smbios, macosVersion, kextNames, acpiPatchIds, usbControllers,
-                        sendProgress: (stage, pct, msg) =>
-                            window.Send(AppResponse.Ok("build:progress", new
+                        sendProgress: async (stage, pct, msg) =>
+                            await window.SendAsync(AppResponse.Ok("build:progress", new
                             {
                                 stage,
                                 progress = pct,
@@ -374,7 +374,7 @@ public static class HandlersSetup
                             }, null)),
                         cts.Token);
 
-                    window.Send(AppResponse.Ok("build:complete", new
+                    await window.SendAsync(AppResponse.Ok("build:complete", new
                     {
                         success      = true,
                         outputPath,
@@ -384,29 +384,29 @@ public static class HandlersSetup
                 }
                 catch (OperationCanceledException)
                 {
-                    window.Send(AppResponse.Fail("build:error", "Build was cancelled", null));
+                    await window.SendAsync(AppResponse.Fail("build:error", "Build was cancelled", null));
                 }
                 catch (Exception ex)
                 {
-                    window.Send(AppResponse.Fail("build:error", ex.Message, null));
+                    await window.SendAsync(AppResponse.Fail("build:error", ex.Message, null));
                 }
             });
         });
 
-        router.Register("build:cancel", (_, window, requestId) =>
+        router.Register("build:cancel", async (_, window, requestId) =>
         {
             lock (buildCtsLock)
             {
                 buildCts?.Cancel();
                 buildCts = null;
             }
-            window.Send(AppResponse.Ok("build:cancelled", null, requestId));
-            return Task.CompletedTask;
+            await window.SendAsync(AppResponse.Ok("build:cancelled", null, requestId));
+
         });
 
         // ── Result ────────────────────────────────────────────────────────────────
 
-        router.Register("result:open-folder", (payload, window, requestId) =>
+        router.Register("result:open-folder", async (payload, window, requestId) =>
         {
             var path = payload?.TryGetProperty("path", out var pp) == true ? pp.GetString() : null;
             if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
@@ -418,13 +418,13 @@ public static class HandlersSetup
                 else
                     Process.Start("open", path);
             }
-            window.Send(AppResponse.Ok("result:opened", null, requestId));
-            return Task.CompletedTask;
+            await window.SendAsync(AppResponse.Ok("result:opened", null, requestId));
+
         });
 
         // ── Report Validation ─────────────────────────────────────────────────────
 
-        router.Register("report:validate", (payload, window, requestId) =>
+        router.Register("report:validate", async (payload, window, requestId) =>
         {
             var validator = sp.GetRequiredService<ReportValidatorService>();
             var json = payload?.GetRawText() ?? "{}";
@@ -432,18 +432,18 @@ public static class HandlersSetup
                 json = reportEl.GetRawText();
 
             var (isValid, errors, warnings, _) = validator.ValidateReport(json);
-            window.Send(AppResponse.Ok("report:validated", new
+            await window.SendAsync(AppResponse.Ok("report:validated", new
             {
                 isValid,
                 errors,
                 warnings,
             }, requestId));
-            return Task.CompletedTask;
+
         });
 
         // ── Hardware Customization ────────────────────────────────────────────────
 
-        router.Register("customize:check", (payload, window, requestId) =>
+        router.Register("customize:check", async (payload, window, requestId) =>
         {
             var customizer = sp.GetRequiredService<HardwareCustomizerService>();
             var report = RebuildReport(payload);
@@ -451,7 +451,7 @@ public static class HandlersSetup
                 ? mv.GetString() ?? "24.0.0" : "24.0.0";
 
             var result = customizer.Customize(report, macosVersion);
-            window.Send(AppResponse.Ok("customize:result", new
+            await window.SendAsync(AppResponse.Ok("customize:result", new
             {
                 compatibleGpus = result.CompatibleGpus,
                 compatibleWifi = result.CompatibleWifi,
@@ -461,7 +461,7 @@ public static class HandlersSetup
                 hasMultipleWifi = result.HasMultipleWifi,
                 gpuConflictWarning = result.GpuConflictWarning,
             }, requestId));
-            return Task.CompletedTask;
+
         });
 
         // ── WiFi Profiles ─────────────────────────────────────────────────────────
@@ -470,11 +470,31 @@ public static class HandlersSetup
         {
             var wifi = sp.GetRequiredService<WifiProfileExtractorService>();
             var profiles = await wifi.GetProfilesAsync();
-            window.Send(AppResponse.Ok("wifi:profiles", profiles.Select(p => new
+            await window.SendAsync(AppResponse.Ok("wifi:profiles", profiles.Select(p => new
             {
                 ssid = p.Ssid,
                 password = p.Password,
             }).ToArray(), requestId));
+        });
+
+        // Opens a native OS file picker to let the user select a hardware report JSON.
+        // This is the reliable cross-platform fallback: GTK WebKit cannot receive
+        // OS-level drag events in JS, so we use ShowOpenFileAsync instead.
+        router.Register("file:pick-report", async (_, window, requestId) =>
+        {
+            var paths = await window.ShowOpenFileAsync(
+                title:       "Select Hardware Report",
+                filters:     [("JSON files", ["json"])]);
+
+            if (paths is not { Length: > 0 } || paths[0] is null)
+            {
+                // cancelled — send null so the frontend can ignore gracefully
+                await window.SendAsync(AppResponse.Ok("file:picked-report", (object?)null, requestId));
+                return;
+            }
+
+            var content = await File.ReadAllTextAsync(paths[0]!);
+            await window.SendAsync(AppResponse.Ok("file:picked-report", content, requestId));
         });
     }
 

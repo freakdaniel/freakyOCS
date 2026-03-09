@@ -47,7 +47,7 @@ public sealed class BuildService
         HashSet<string> enabledKextNames,
         List<string> acpiPatchIds,
         List<UsbController> usbControllers,
-        Action<string, int, string> sendProgress,
+        Func<string, int, string, Task> sendProgress,
         CancellationToken ct = default)
     {
         var workDir = _utils.GetTemporaryDir();
@@ -57,33 +57,33 @@ public sealed class BuildService
         try
         {
             // ── 1. Folder structure ──────────────────────────────────────────────
-            sendProgress("downloading-opencore", 2, "Creating EFI folder structure…");
+            await sendProgress("downloading-opencore", 2, "Creating EFI folder structure…");
             foreach (var sub in new[] { "BOOT", "OC/ACPI", "OC/Drivers", "OC/Kexts", "OC/Tools", "OC/Resources" })
                 Directory.CreateDirectory(Path.Combine(efiDir, sub.Replace('/', Path.DirectorySeparatorChar)));
 
             // ── 2. Download + extract OpenCore ───────────────────────────────────
-            sendProgress("downloading-opencore", 5, "Fetching latest OpenCore release…");
+            await sendProgress("downloading-opencore", 5, "Fetching latest OpenCore release…");
             var ocExtracted = await TryDownloadOpenCoreAsync(workDir, efiDir, ocDir, ct);
             if (!ocExtracted)
                 _logger?.LogWarning("OpenCore download failed — creating minimal EFI structure only");
 
-            sendProgress("downloading-opencore", 35, ocExtracted ? "OpenCore extracted" : "OpenCore unavailable — continuing");
+            await sendProgress("downloading-opencore", 35, ocExtracted ? "OpenCore extracted" : "OpenCore unavailable — continuing");
 
             // ── 3. Download kexts ────────────────────────────────────────────────
-            sendProgress("downloading-kexts", 35, "Downloading kexts…");
+            await sendProgress("downloading-kexts", 35, "Downloading kexts…");
             var kextsDlDir = Path.Combine(workDir, "_kexts_dl");
             Directory.CreateDirectory(kextsDlDir);
             await DownloadAndInstallKextsAsync(enabledKextNames, kextsDlDir, ocDir, ct,
-                (msg, pct) => sendProgress("downloading-kexts", 35 + pct / 3, msg));
-            sendProgress("downloading-kexts", 65, "Kexts ready");
+                async (msg, pct) => await sendProgress("downloading-kexts", 35 + pct / 3, msg));
+            await sendProgress("downloading-kexts", 65, "Kexts ready");
 
             // ── 4. Placeholder ACPI (config.plist handles patch names) ───────────
-            sendProgress("generating-acpi", 65, "Preparing ACPI section…");
+            await sendProgress("generating-acpi", 65, "Preparing ACPI section…");
             // No binary SSDTs generated here — the patches are referenced by name in config.plist.
             await Task.CompletedTask; // explicit async point
 
             // ── 5. config.plist ──────────────────────────────────────────────────
-            sendProgress("generating-config", 70, "Generating config.plist…");
+            await sendProgress("generating-config", 70, "Generating config.plist…");
             var configPlist = _config.GenerateConfig(report, smbios, macosVersion,
                 enabledKextNames, acpiPatchIds);
             var configPath = Path.Combine(ocDir, "config.plist");
@@ -91,16 +91,16 @@ public sealed class BuildService
                 PropertyListParser.SaveAsXml(configPlist, fs);
 
             // ── 6. USB map kext ──────────────────────────────────────────────────
-            sendProgress("generating-usb-map", 80, "Generating USB map kext…");
+            await sendProgress("generating-usb-map", 80, "Generating USB map kext…");
             await GenerateUsbMapAsync(usbControllers, smbios, ocDir, ct);
-            sendProgress("generating-usb-map", 88, "USB map generated");
+            await sendProgress("generating-usb-map", 88, "USB map generated");
 
             // ── 7. Package ───────────────────────────────────────────────────────
-            sendProgress("packaging", 90, "Packaging output zip…");
+            await sendProgress("packaging", 90, "Packaging output zip…");
             var outputPath = GetOutputZipPath();
             if (File.Exists(outputPath)) File.Delete(outputPath);
             ZipFile.CreateFromDirectory(workDir, outputPath);
-            sendProgress("complete", 100, $"Done → {outputPath}");
+            await sendProgress("complete", 100, $"Done → {outputPath}");
 
             return outputPath;
         }
@@ -167,7 +167,7 @@ public sealed class BuildService
 
     private async Task DownloadAndInstallKextsAsync(
         HashSet<string> kextNames, string dlDir, string ocDir,
-        CancellationToken ct, Action<string, int> onProgress)
+        CancellationToken ct, Func<string, int, Task> onProgress)
     {
         var list   = kextNames.ToList();
         var kextsTarget = Path.Combine(ocDir, "Kexts");
@@ -177,7 +177,7 @@ public sealed class BuildService
             ct.ThrowIfCancellationRequested();
             var name = list[i];
             var pct  = (int)((double)i / list.Count * 100);
-            onProgress($"Downloading {name}…", pct);
+            await onProgress($"Downloading {name}…", pct);
 
             try
             {

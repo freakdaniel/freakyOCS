@@ -30,7 +30,6 @@ export function ReportPage() {
   const [isDragOver, setIsDragOver]   = useState(false)
   const [error, setError]             = useState<string | null>(null)
   const [savedPath, setSavedPath]     = useState<string | null>(null)
-
   usePhotinoEvent<HardwareReport>('hardware:detected', (data) => {
     setIsDetecting(false)
     if (data) { dispatch({ type: 'SET_REPORT', report: data }); setError(null) }
@@ -53,21 +52,29 @@ export function ReportPage() {
     })
   }, [invoke])
 
+  // Opens a native OS file picker via the bridge and loads the selected report.
+  // This is reliable on all platforms: GTK WebKit cannot propagate OS drag events
+  // into JS, so we use ShowOpenFileAsync on the backend instead.
+  const handlePickFile = useCallback(async () => {
+    try {
+      const response = await invoke<void, string | null>('file:pick-report')
+      if (response.data == null) return  // user cancelled
+      const report = JSON.parse(response.data) as HardwareReport
+      if (report.cpu && report.gpu && report.motherboard) {
+        dispatch({ type: 'SET_REPORT', report }); setError(null)
+      } else {
+        setError('Invalid hardware report format')
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to load report')
+    }
+  }, [invoke, dispatch])
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault(); setIsDragOver(false)
-    const file = e.dataTransfer.files[0]
-    if (!file || !file.name.endsWith('.json')) { setError('Please drop a valid JSON file'); return }
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      try {
-        const report = JSON.parse(event.target?.result as string) as HardwareReport
-        if (report.cpu && report.gpu && report.motherboard) {
-          dispatch({ type: 'SET_REPORT', report }); setError(null)
-        } else { setError('Invalid hardware report format') }
-      } catch { setError('Failed to parse JSON file') }
-    }
-    reader.readAsText(file)
-  }, [dispatch])
+    // GTK WebKit does not pass OS drag targets to JS — always use the native picker
+    void handlePickFile()
+  }, [handlePickFile])
 
   const handleDragOver  = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragOver(true) }, [])
   const handleDragLeave = useCallback(() => setIsDragOver(false), [])
@@ -130,6 +137,7 @@ export function ReportPage() {
           onDragLeave={handleDragLeave}
           transition="all 0.2s ease"
         >
+
           <Flex direction="column" align="center" gap={4} py={2}>
             <Flex w="48px" h="48px" borderRadius="12px"
               bg={isDragOver ? 'rgba(45,212,191,0.1)' : 'rgba(255,255,255,0.04)'}
@@ -140,11 +148,25 @@ export function ReportPage() {
               <Text color={T} fontWeight="600" fontSize="13px" mb={1}>{t('report.loadFile')}</Text>
               <Text color={TS} fontSize="12px" lineHeight="1.6">{t('report.loadFileDesc')}</Text>
             </Box>
-            <Box px={3} py="3px" borderRadius="5px"
-              bg="rgba(255,255,255,0.04)" border={`1px solid ${B}`}
-              fontSize="10px" color={TM} fontWeight="600" letterSpacing="0.05em">
-              .JSON
-            </Box>
+            <HStack gap={2}>
+              <Box px={3} py="3px" borderRadius="5px"
+                bg="rgba(255,255,255,0.04)" border={`1px solid ${B}`}
+                fontSize="10px" color={TM} fontWeight="600" letterSpacing="0.05em">
+                .JSON
+              </Box>
+              <Box
+                as="button"
+                px={3} py="3px" borderRadius="5px"
+                bg="rgba(45,212,191,0.08)" border="1px solid rgba(45,212,191,0.2)"
+                fontSize="10px" color={TEAL} fontWeight="600" letterSpacing="0.05em"
+                cursor="pointer"
+                _hover={{ bg: 'rgba(45,212,191,0.14)' }}
+                transition="all 0.15s"
+                onClick={() => void handlePickFile()}
+              >
+                {t('report.browse')}
+              </Box>
+            </HStack>
           </Flex>
         </Box>
       </Flex>
